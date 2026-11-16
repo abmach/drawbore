@@ -13,7 +13,7 @@ The installer had to decide what to do when a skill directory already exists at 
 
 ## Decision
 
-A skill directory is foreign only when its content diverges from the package. A file/directory mismatch is preserved, not blocked. Overwrite requires `--force` or `--replace-skills`.
+A skill directory is foreign only when its content diverges from the package. A file/directory mismatch is preserved, not blocked. Overwrite requires `--force`.
 
 ## Rationale
 
@@ -26,5 +26,5 @@ Protects user files while still installing cleanly. Source: commit `7044613`, `i
 
 ## Consequences
 
-- A locally modified skill survives a rerun.
-- Updating an installed skill requires `--replace-skills`.
+- A locally modified skill survives a rerun and an `update`.
+- Refreshing an existing install is `drawbore update`, which re-copies skills while preserving local edits; `--force` handles ownership conflicts.

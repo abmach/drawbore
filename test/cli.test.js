@@ -65,15 +65,17 @@ test("--help lists the commands and flags", async () => {
     assert.equal(result.status, 0);
     for (const expected of [
       "drawbore init",
+      "drawbore update",
       "drawbore check",
       "--location",
       "--notebook",
       "--instruction",
       "--skills",
-      "--replace-skills",
+      "--force",
       "--yes",
       "--json",
       "--fix",
+      "--check",
     ]) {
       assert.match(result.stdout, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     }
@@ -153,6 +155,53 @@ test("init rejects unknown options without installing anything", async () => {
     assert.equal(result.status, 2);
     assert.match(result.stderr, /Unknown option: --bogus/);
     await assert.rejects(readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update refreshes skills and preserves locally-modified ones", async () => {
+  const root = await repo();
+  try {
+    assert.equal(run(root, ["init", "--yes"]).status, 0);
+
+    const skill = path.join(root, ".agents", "skills", "recall", "SKILL.md");
+    await writeFile(skill, "# Local customization\n");
+
+    const result = run(root, ["update"]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Preserved 1 file/);
+    assert.equal(await readFile(skill, "utf8"), "# Local customization\n");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update --check reports drift without writing", async () => {
+  const root = await repo();
+  try {
+    assert.equal(run(root, ["init", "--yes"]).status, 0);
+    assert.equal(run(root, ["update", "--check"]).status, 0);
+
+    const frame = path.join(root, ".agents", "skills", "frame");
+    await rm(path.join(frame, ".drawbore-skill.json"));
+    await writeFile(path.join(frame, "SKILL.md"), "# foreign\n");
+
+    const drift = run(root, ["update", "--check"]);
+    assert.equal(drift.status, 1);
+    assert.match(drift.stdout, /not owned by this install/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update rejects unknown options with exit 2", async () => {
+  const root = await repo();
+  try {
+    assert.equal(run(root, ["init", "--yes"]).status, 0);
+    const result = run(root, ["update", "--bogus"]);
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /Unknown option for update: --bogus/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

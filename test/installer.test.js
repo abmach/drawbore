@@ -20,17 +20,14 @@ test.after(async () => {
   await Promise.all(tempDirs.map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-test("explicit replacement overwrites customized installed skill files", async () => {
+test("force overwrites customized installed skill files", async () => {
   const root = await makeProject();
   const customized = path.join(root, ".agents", "skills", "discover", "SKILL.md");
 
   await installSkills(root, ".agents", packageData, { force: true });
   await writeFile(customized, "# Local customization\n");
 
-  const result = await installSkills(root, ".agents", packageData, {
-    replaceExisting: true,
-    force: true,
-  });
+  const result = await installSkills(root, ".agents", packageData, { force: true });
 
   assert.match(await readFile(customized, "utf8"), /# Discover project context/);
   assert.deepEqual(result.preserved, []);

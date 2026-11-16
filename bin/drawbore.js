@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import path from "node:path";
+import { readFile, stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import {
   addInstruction,
   buildInstructionChoices,
@@ -15,13 +17,20 @@ import {
   installSkills,
   loadPackageData,
   notebookDirectory,
+  readInstallMarker,
+  readInstallState,
+  readSkillMarker,
   SkillConflictError,
   summarize,
   supportedLocations,
   writeInstallMarker,
 } from "../lib/index.js";
 
+const hashContents = (contents) => createHash("sha256").update(contents).digest("hex");
+
 const CHECK_FLAGS = new Set(["--json", "--strict", "--fix"]);
+const UPDATE_FLAGS = new Set(["--dry-run", "--check", "--force"]);
+
 const SUPPORTED_INSTRUCTIONS = new Set(["AGENTS.md", "CLAUDE.md"]);
 
 const args = process.argv.slice(2);
@@ -34,6 +43,7 @@ const command = args[0];
 // command, since the version is the same for every subcommand.
 if (args.includes("--help") || args.includes("-h")) {
   if (command === "check") printCheckHelp(packageData.version);
+  else if (command === "update") printUpdateHelp(packageData.version);
   else printHelp(packageData.version);
   process.exit(0);
 }
@@ -45,8 +55,10 @@ if (args.includes("--version") || args.includes("-v")) {
 
 if (command === "check") {
   await runCheck(args.slice(1));
+} else if (command === "update") {
+  await runUpdate(args.slice(1), packageData);
 } else if (command !== "init") {
-  console.error("Usage: drawbore init | drawbore check");
+  console.error("Usage: drawbore init | drawbore update | drawbore check");
   process.exit(2);
 } else {
   let plan;
@@ -71,7 +83,6 @@ if (command === "check") {
       locations: [".agents"],
       notebook: true,
       instructions: [{ instructionFile: "AGENTS.md" }],
-      replaceSkills: false,
       force: false,
       dryRun: false,
       skills: null,
@@ -111,7 +122,6 @@ if (command === "check") {
 
     for (const location of selectedLocations) {
       const result = await installSkills(root, location, selection, {
-        replaceExisting: plan?.replaceSkills === true,
         force: plan?.force === true,
       });
       preservedSkillFiles.push(...result.preserved);
@@ -144,6 +154,111 @@ if (command === "check") {
   }
 }
 
+// `drawbore update` refreshes an existing install: re-copies the package's
+// skills (preserving locally-modified ones, same rules as init), re-applies the
+// instruction block, and refreshes the install marker. Unlike init it never
+// creates a notebook or asks where to install — it works from the existing
+// install marker.
+
+async function runUpdate(options, packageData) {
+  for (const option of options) {
+    if (!UPDATE_FLAGS.has(option)) {
+      console.error(`Unknown option for update: ${option}`);
+      printUpdateHelp(packageData.version);
+      process.exit(2);
+    }
+  }
+
+  const dryRun = options.includes("--dry-run");
+  const checkOnly = options.includes("--check");
+  const force = options.includes("--force");
+  const root = await findProjectRoot();
+  const marker = await readInstallMarker(root);
+  const locations = Array.isArray(marker.locations) ? marker.locations : [];
+
+  if (locations.length === 0) {
+    console.error("No existing Drawbore install found. Run `drawbore init` first.");
+    process.exit(1);
+  }
+
+  const { previousHashes, installNamespace } = await readInstallState(root, locations[0]);
+  const selection = { ...packageData };
+  const drift = [];
+
+  // Drift means "a skill directory this install does not own" — the same
+  // ownership question `init` answers, so a foreign skill blocks update without
+  // --force just as it blocks a rerun. A skill with a matching marker is ours.
+  // Otherwise, if the install marker recorded hashes for it, it is ours only
+  // while the current bytes still hash-match what was recorded; a hand copy
+  // over an installed skill with no marker is drift.
+  for (const location of locations) {
+    const destination = path.join(root, location, "skills");
+    for (const skill of selection.skills) {
+      const target = path.join(destination, skill);
+      if (!(await stat(target).then((s) => s.isDirectory()).catch(() => false))) continue;
+      if (await readSkillMarker(target).then((m) => m?.namespace === packageData.namespace)) continue;
+      const recorded = previousHashes[`skills/${skill}/SKILL.md`];
+      if (installNamespace === packageData.namespace && recorded !== undefined) {
+        const current = await readFile(path.join(target, "SKILL.md")).then((b) => hashContents(b)).catch(() => null);
+        if (current === recorded) continue;
+      }
+      drift.push(`${location}/skills/${skill} is not owned by this install`);
+    }
+  }
+
+  console.log(`Drawbore ${packageData.version}`);
+  console.log(`Project: ${root}`);
+
+  if (checkOnly) {
+    if (drift.length === 0) {
+      console.log("No drift detected. Installed skills match this package.");
+      process.exit(0);
+    }
+    for (const line of drift) console.log(`- ${line}`);
+    process.exit(1);
+  }
+
+  if (dryRun) {
+    console.log("Dry run — nothing will be written. Would update:");
+    console.log(formatInstallResult(locations, false, (marker.instructions ?? []).map((f) => f), [], []));
+    process.exit(0);
+  }
+
+  const preservedSkillFiles = [];
+  const replacedSkillFiles = [];
+  const skillHashes = {};
+  for (const location of locations) {
+    const result = await installSkills(root, location, selection, { force });
+    preservedSkillFiles.push(...result.preserved);
+    replacedSkillFiles.push(...result.replaced);
+    skillHashes[location] = result.hashes;
+  }
+
+  const instructionFiles = [];
+  for (const instructionFile of marker.instructions ?? []) {
+    await addInstruction(root, instructionFile, packageData);
+    instructionFiles.push(instructionFile);
+  }
+
+  await writeInstallMarker(root, selection, locations, false, [...new Set(instructionFiles)], skillHashes);
+  console.log(formatInstallResult(locations, false, instructionFiles, preservedSkillFiles, replacedSkillFiles));
+}
+
+function printUpdateHelp(version) {
+  console.log(`Drawbore ${version}
+
+Usage:
+  drawbore update [--dry-run] [--check] [--force]
+
+Refresh an existing install: re-copies the package's skills (preserving
+locally-modified ones) and re-applies the instruction block.
+
+Options:
+  --dry-run   Print what would change without writing anything.
+  --check     Report drift only; exit 1 if the install differs from the package.
+  --force     Replace skills owned by another package (ownership conflicts).`);
+}
+
 function parseExplicitOptions(options, packageData) {
   if (options.length === 0) {
     return undefined;
@@ -152,7 +267,6 @@ function parseExplicitOptions(options, packageData) {
   const locations = [];
   const instructions = [];
   let notebook = null;
-  let replaceSkills = false;
   let force = false;
   let dryRun = false;
   let skills = null;
@@ -182,8 +296,6 @@ function parseExplicitOptions(options, packageData) {
       const unknown = requested.filter((skill) => !packageData.skills.includes(skill));
       if (unknown.length > 0) throw new Error(`Unknown skill(s): ${unknown.join(", ")}`);
       skills = [...new Set(requested)];
-    } else if (option === "--replace-skills") {
-      replaceSkills = true;
     } else if (option === "--force") {
       force = true;
     } else if (option === "--dry-run") {
@@ -206,7 +318,6 @@ function parseExplicitOptions(options, packageData) {
   return {
     locations: [...new Set(locations)],
     notebook,
-    replaceSkills,
     force,
     dryRun,
     skills,
@@ -332,6 +443,7 @@ function printHelp(version) {
 
 Usage:
   drawbore init [options]
+  drawbore update [--dry-run] [--check] [--force]
   drawbore check [--json] [--strict] [--fix]
   drawbore --version
   drawbore --help
@@ -343,10 +455,14 @@ init options:
   --instruction <file>  Add the Drawbore block to an instruction file (repeatable).
                         One of: AGENTS.md, CLAUDE.md.
   --skills <list>       Comma-separated subset of skills to install.
-  --replace-skills      Replace installed skill files that differ.
   --force               Replace skills owned by another package.
   --yes                 Accept defaults without prompting.
   --dry-run             Print what would be installed without writing anything.
+
+update options:
+  --dry-run             Print what would change without writing anything.
+  --check               Report drift only; exit 1 if the install differs from the package.
+  --force               Replace skills owned by another package.
 
 Drawbore is provider-neutral: it does not assume a forge, registry, or CI provider.`);
 }

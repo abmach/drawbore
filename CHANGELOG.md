@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-11-16
+
+### Changed
+
+- **Breaking:** `drawbore init --replace-skills` is removed. Use the new `drawbore update` command to refresh an existing install; it re-copies the package's skills while preserving locally-modified ones. Scripts calling `init --replace-skills` must switch to `update`.
+
+### Added
+
+- `drawbore update` — refreshes an existing install: re-copies skills (preserving local edits), re-applies the instruction block, and refreshes the install marker. Supports `--dry-run`, `--check` (drift report, exit 1 on divergence), and `--force` (ownership conflicts). Requires an existing install; run `drawbore init` first.
+
 ## [0.1.2] - 2026-11-16
 
 ### Fixed
