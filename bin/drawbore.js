@@ -219,8 +219,8 @@ async function runUpdate(options, packageData) {
   }
 
   if (dryRun) {
-    console.log("Dry run — nothing will be written. Would update:");
-    console.log(formatInstallResult(locations, false, (marker.instructions ?? []).map((f) => f), [], []));
+    console.log("Dry run — nothing will be written.");
+    console.log(formatInstallResult(locations, false, (marker.instructions ?? []).map((f) => f), [], [], { noun: "Would update", firstInstall: false }));
     process.exit(0);
   }
 
@@ -241,7 +241,7 @@ async function runUpdate(options, packageData) {
   }
 
   await writeInstallMarker(root, selection, locations, false, [...new Set(instructionFiles)], skillHashes);
-  console.log(formatInstallResult(locations, false, instructionFiles, preservedSkillFiles, replacedSkillFiles));
+  console.log(formatInstallResult(locations, false, instructionFiles, preservedSkillFiles, replacedSkillFiles, { noun: "Updated", firstInstall: false }));
 }
 
 function printUpdateHelp(version) {
@@ -422,15 +422,17 @@ async function runCheck(options) {
   process.exit(failed ? 1 : 0);
 }
 
-function formatInstallResult(locations, notebookCreated, instructionFiles, preservedSkillFiles, replacedSkillFiles) {
-  const lines = ["", "Installed:"];
+function formatInstallResult(locations, notebookCreated, instructionFiles, preservedSkillFiles, replacedSkillFiles, { noun = "Installed", firstInstall = true } = {}) {
+  const lines = ["", `${noun}:`];
   for (const location of locations) lines.push(`- skills: ${location}/skills/`);
   if (notebookCreated) lines.push(`- record: ${notebookDirectory}/`);
   for (const file of instructionFiles) lines.push(`- instruction: ${file}`);
   lines.push(`- marker: ${installMarkerFile}`);
   if (preservedSkillFiles.length > 0) lines.push("", `Preserved ${preservedSkillFiles.length} file(s).`);
   if (replacedSkillFiles.length > 0) lines.push(`Replaced ${replacedSkillFiles.length} file(s).`);
-  lines.push("", "Run the discover skill in your agent to propose the first durable records.");
+  if (firstInstall) {
+    lines.push("", "Run the discover skill in your agent to propose the first durable records.");
+  }
   return lines.join("\n");
 }
 
