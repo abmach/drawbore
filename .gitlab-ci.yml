@@ -1,0 +1,45 @@
+# Drawbore npm staged publish — canonical template for the abmach portfolio.
+# One-time setup on npmjs.com -> package settings -> Trusted publishing:
+#   Provider:     GitLab CI/CD
+#   Namespace:    abmach
+#   Project:      drawbore
+#   CI file path: .gitlab-ci.yml
+#   Environment:  leave empty
+#   Allowed actions: stage publish only
+#
+# After a maintainer approves a stage:
+#   npm stage list
+#   npm stage approve <stage-id>
+#
+# Staged publishing requires npm CLI >= 11.15 / Node >= 22.14.
+# node:24 bundles an older npm, so upgrade explicitly.
+
+stage-npm:
+  stage: deploy
+  image: node:24
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
+  id_tokens:
+    # npm reads NPM_ID_TOKEN for the OIDC token exchange; the audience must be
+    # npm:<registry host>. SIGSTORE_ID_TOKEN is separate — it signs provenance
+    # and uses the sigstore audience.
+    NPM_ID_TOKEN:
+      aud: "npm:registry.npmjs.org"
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
+  script:
+    - npm install -g npm@11
+    - npm ci
+    - npm test
+    - PKG_NAME=$(node -p "require('./package.json').name")
+    - PKG_VERSION=$(node -p "require('./package.json').version")
+    - TAG_VERSION="${CI_COMMIT_TAG#v}"
+    - if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then echo "Tag/package version mismatch"; exit 1; fi
+    - |
+      if npm view "${PKG_NAME}@${PKG_VERSION}" version >/dev/null 2>&1; then
+        echo "Version already published — nothing to stage."
+      else
+        npm publish --dry-run
+        npm stage publish --provenance --access public
+        echo "Staged $CI_COMMIT_TAG — a maintainer must now approve it: npm stage list && npm stage approve <stage-id> (2FA)."
+      fi

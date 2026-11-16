@@ -1,0 +1,12 @@
+{
+  "namespace": "drawbore",
+  "skills": [
+    "discover",
+    "recall",
+    "frame",
+    "record",
+    "review",
+    "init-project",
+    "release"
+  ]
+}

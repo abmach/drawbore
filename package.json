@@ -1,0 +1,43 @@
+{
+  "name": "drawbore",
+  "version": "0.1.0",
+  "description": "You code. It holds. Durable project context, principles, and portable skills for AI-assisted software development.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "drawbore": "bin/drawbore.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "skills",
+    "templates",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "agent-skills",
+    "ai",
+    "durable-context",
+    "workflow",
+    "workflow-enhancement"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^8.7.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/abmach/drawbore.git"
+  },
+  "bugs": {
+    "url": "https://gitlab.com/abmach/drawbore/-/issues"
+  },
+  "author": "Arthur Biazon Machado",
+  "engines": {
+    "node": ">=20"
+  }
+}
