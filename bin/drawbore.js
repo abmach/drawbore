@@ -3,8 +3,11 @@
 import path from "node:path";
 import {
   addInstruction,
+  buildInstructionChoices,
+  buildLocationChoices,
   checkNotebook,
   createNotebook,
+  createUi,
   findProjectRoot,
   fixMechanical,
   inspectProject,
@@ -50,16 +53,44 @@ if (command === "check") {
     printHelp(packageData.version);
     process.exit(2);
   }
-
   const root = await findProjectRoot();
-  await inspectProject(root);
-  const selectedLocations = plan?.locations ?? [".agents"];
-  const createNotebookDirectory = plan?.notebook ?? true;
-  const instructionTargets = plan?.instructions ?? [{ instructionFile: "AGENTS.md" }];
+  const inspection = await inspectProject(root);
+  const ui = createUi();
+
+  // No flags + non-interactive (pipe, CI, test): use the defaults rather than
+  // prompting on a stream nobody is reading. The prompts layer itself falls
+  // back to readline, which would block forever on a closed stdin.
+  if (!plan && !ui.isInteractive) {
+    plan = {
+      locations: [".agents"],
+      notebook: true,
+      instructions: [{ instructionFile: "AGENTS.md" }],
+      replaceSkills: false,
+      force: false,
+      skills: null,
+    };
+  }
+
 
   try {
     console.log(`Drawbore ${packageData.version}`);
     console.log(`Project: ${root}`);
+
+    if (!plan) ui.renderProjectState(inspection);
+
+    const selectedLocations = plan?.locations ?? await pickLocations(inspection, ui);
+    if (selectedLocations.length === 0) {
+      console.log("No harness locations selected. Nothing was installed.");
+      process.exit(0);
+    }
+
+    const createNotebookDirectory = plan?.notebook ?? await pickNotebook(ui, inspection);
+    const instructionTargets = plan?.instructions ?? await pickInstructions(selectedLocations, inspection, ui);
+
+    if (!plan && !(await ui.confirm({ message: "Install Drawbore with these choices?", defaultValue: true }))) {
+      console.log("Installation cancelled. Nothing was installed.");
+      process.exit(0);
+    }
 
     const selection = plan?.skills ? { ...packageData, skills: plan.skills } : packageData;
     const preservedSkillFiles = [];
@@ -96,19 +127,14 @@ if (command === "check") {
       process.exit(1);
     }
     throw error;
+  } finally {
+    ui.close();
   }
 }
 
 function parseExplicitOptions(options, packageData) {
   if (options.length === 0) {
-    return {
-      locations: [".agents"],
-      notebook: true,
-      instructions: [{ instructionFile: "AGENTS.md" }],
-      replaceSkills: false,
-      force: false,
-      skills: null,
-    };
+    return undefined;
   }
 
   const locations = [];
@@ -170,6 +196,48 @@ function parseExplicitOptions(options, packageData) {
     skills,
     instructions: [...new Map(instructions.map((target) => [target.instructionFile, target])).values()],
   };
+}
+
+async function pickLocations(inspection, ui) {
+  const choices = buildLocationChoices(inspection);
+  const selected = await ui.selectLocations(choices);
+  return validateSelectedLocations(selected);
+}
+
+async function pickNotebook(ui, inspection) {
+  const message = inspection.notebookExists
+    ? `Create or refresh the ${notebookDirectory} templates? Existing files will be preserved.`
+    : `Create ${notebookDirectory} with starter records?`;
+  return ui.confirm({ message, defaultValue: true });
+}
+
+async function pickInstructions(selectedLocations, inspection, ui) {
+  const targets = [...new Set(selectedLocations.map((location) => supportedLocations[location]))].map(
+    (instructionFile) => ({
+      instructionFile,
+      exists: inspection.locations.some((entry) => entry.instructionName === instructionFile && entry.instructionExists),
+    }),
+  );
+  const choices = buildInstructionChoices(targets);
+  const picked = await ui.selectInstructions(choices);
+
+  const invalid = picked.filter((value) => !targets.some((target) => target.instructionFile === value));
+  if (invalid.length > 0) {
+    throw new Error(`Unsupported instruction file(s): ${invalid.join(", ")}`);
+  }
+
+  return picked.map((instructionFile) => ({ instructionFile }));
+}
+
+function validateSelectedLocations(selected) {
+  if (!selected || selected.length === 0) {
+    return [];
+  }
+  const invalid = selected.filter((location) => !(location in supportedLocations));
+  if (invalid.length > 0) {
+    throw new Error(`Unsupported location(s): ${invalid.join(", ")}`);
+  }
+  return [...new Set(selected)];
 }
 
 function splitList(value) {

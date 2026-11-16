@@ -21,6 +21,31 @@ function run(root, args) {
   });
 }
 
+test("bare init in a non-TTY installs the defaults without prompting", async () => {
+  const root = await repo();
+  try {
+    const result = run(root, ["init"]);
+    assert.equal(result.status, 0, result.stderr);
+    await readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md"));
+    await readFile(path.join(root, ".drawbore", "index.md"));
+    const instruction = await readFile(path.join(root, "AGENTS.md"), "utf8");
+    assert.match(instruction, /<!-- drawbore:start -->/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("the CLI imports the interactive prompt builders", async () => {
+  const source = await readFile(cli, "utf8");
+  assert.match(source, /createUi/);
+  assert.match(source, /buildLocationChoices/);
+  assert.match(source, /buildInstructionChoices/);
+  assert.match(source, /ui\.selectLocations/);
+  assert.match(source, /ui\.selectInstructions/);
+  assert.match(source, /ui\.confirm/);
+});
+
+
 test("--version prints the package version", async () => {
   const root = await repo();
   try {
