@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0] - 2026-11-16
 
+Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged release is next).
+
 ### Added
 
 - Consent-aware installer for `.agents`, `.claude`, `.codex`, `.cursor`, `.omp`, and `.opencode`.
