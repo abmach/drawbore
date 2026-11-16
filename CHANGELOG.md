@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0] - 2026-11-16
 
+Published to npm as `drawbore@0.2.0` — staged via GitLab CI, maintainer approved with 2FA.
+
 ### Changed
 
 - **Breaking:** `drawbore init --replace-skills` is removed. Use the new `drawbore update` command to refresh an existing install; it re-copies the package's skills while preserving locally-modified ones. Scripts calling `init --replace-skills` must switch to `update`.
