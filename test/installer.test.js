@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { installSkills, loadPackageData } from "../lib/installer.js";
+import { createNotebook, installSkills, loadPackageData } from "../lib/installer.js";
 
 const packageData = await loadPackageData();
 const tempDirs = [];
@@ -47,4 +47,41 @@ test("rerunning the installer preserves file-directory conflicts", async () => {
   const stats = await stat(conflicting);
   assert.equal(stats.isDirectory(), true);
   assert.deepEqual(result.preserved, [".agents/skills/discover/SKILL.md"]);
+});
+
+test("createNotebook documents the tracked notebook in .gitignore", async () => {
+  const root = await makeProject();
+  try {
+    await createNotebook(root);
+    const gitignore = await readFile(path.join(root, ".gitignore"), "utf8");
+    assert.match(gitignore, /`\.drawbore\/` is tracked on purpose/);
+    assert.doesNotMatch(gitignore, /^\.drawbore\/?$/m);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("createNotebook does not duplicate the note on rerun", async () => {
+  const root = await makeProject();
+  try {
+    await createNotebook(root);
+    await createNotebook(root);
+    const gitignore = await readFile(path.join(root, ".gitignore"), "utf8");
+    assert.equal(gitignore.match(/tracked on purpose/g)?.length, 1);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("createNotebook preserves an existing .gitignore", async () => {
+  const root = await makeProject();
+  try {
+    await writeFile(path.join(root, ".gitignore"), "node_modules/\n");
+    await createNotebook(root);
+    const gitignore = await readFile(path.join(root, ".gitignore"), "utf8");
+    assert.match(gitignore, /^node_modules\/$/m);
+    assert.match(gitignore, /tracked on purpose/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

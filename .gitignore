@@ -4,3 +4,8 @@ coverage/
 *.log
 .DS_Store
 .openidea/
+
+# `.drawbore/` is tracked on purpose: it is this project's durable context,
+# validated by `drawbore check`. To keep it local instead, remove it from the
+# repository (git rm -r --cached .drawbore) and add a `.drawbore/` line here —
+# that is a deliberate choice, not the default.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -158,6 +158,31 @@ test("init rejects unknown options without installing anything", async () => {
   }
 });
 
+test("init --dry-run prints the plan without writing anything", async () => {
+  const root = await repo();
+  try {
+    const result = run(root, ["init", "--dry-run", "--yes"]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Dry run/);
+    assert.match(result.stdout, /Would install/);
+    await assert.rejects(readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md")));
+    await assert.rejects(readFile(path.join(root, ".drawbore", "index.md")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("check --help prints check usage, not top-level help", async () => {
+  const root = await repo();
+  try {
+    const result = run(root, ["check", "--help"]);
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /drawbore check \[--json\] \[--strict\] \[--fix\]/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 const INDEX = `# Project Notebook
 
 - [Context](context.md) — purpose.
@@ -236,6 +261,28 @@ test("check --fix aligns the id and then reports clean", async () => {
 
     const fixed = await readFile(path.join(root, ".drawbore", "decisions", "0007-record.md"), "utf8");
     assert.match(fixed, /^id: 0007$/m);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("check --fix renumbers duplicates keeping the widest id width", async () => {
+  // The renumbered file must pad to the widest existing prefix, not its own
+  // width: `1-dup.md` renumbered to 2 must stay `0002-dup.md` when a `0007`
+  // file is present.
+  const root = await notebookRepo({
+    "decisions/0001-first.md": DECISION(1),
+    "decisions/1-dup.md": DECISION(1),
+    "decisions/0007-other.md": DECISION(7),
+  });
+  try {
+    const result = run(root, ["check", "--fix"]);
+    assert.equal(result.status, 0, result.stdout);
+
+    const files = await readdir(path.join(root, ".drawbore", "decisions"));
+    const duplicate = files.find((file) => file.includes("dup"));
+    assert.ok(duplicate, `expected a renumbered duplicate file, got ${files.join(", ")}`);
+    assert.equal(duplicate, "0002-dup.md");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

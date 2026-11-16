@@ -28,6 +28,10 @@ const args = process.argv.slice(2);
 const packageData = await loadPackageData();
 const command = args[0];
 
+// --help is scoped to the invoked command: `drawbore check --help` prints check
+// usage, `drawbore init --help` prints init help, bare `drawbore --help` prints
+// the top-level help. --version always prints the package version regardless of
+// command, since the version is the same for every subcommand.
 if (args.includes("--help") || args.includes("-h")) {
   if (command === "check") printCheckHelp(packageData.version);
   else printHelp(packageData.version);
@@ -60,6 +64,8 @@ if (command === "check") {
   // No flags + non-interactive (pipe, CI, test): use the defaults rather than
   // prompting on a stream nobody is reading. The prompts layer itself falls
   // back to readline, which would block forever on a closed stdin.
+  // --dry-run is a flags-mode preview; with no flags the interactive confirm
+  // already serves as the gate, so it is not threaded through the fallback.
   if (!plan && !ui.isInteractive) {
     plan = {
       locations: [".agents"],
@@ -67,6 +73,7 @@ if (command === "check") {
       instructions: [{ instructionFile: "AGENTS.md" }],
       replaceSkills: false,
       force: false,
+      dryRun: false,
       skills: null,
     };
   }
@@ -89,6 +96,11 @@ if (command === "check") {
 
     if (!plan && !(await ui.confirm({ message: "Install Drawbore with these choices?", defaultValue: true }))) {
       console.log("Installation cancelled. Nothing was installed.");
+      process.exit(0);
+    }
+    if (plan?.dryRun) {
+      console.log("Dry run — nothing will be written. Would install:");
+      console.log(formatInstallResult(selectedLocations, createNotebookDirectory, instructionTargets.map((target) => target.instructionFile), [], []).replace(/^Installed:/, "  Would install:"));
       process.exit(0);
     }
 
@@ -142,6 +154,7 @@ function parseExplicitOptions(options, packageData) {
   let notebook = null;
   let replaceSkills = false;
   let force = false;
+  let dryRun = false;
   let skills = null;
 
   for (let index = 0; index < options.length; index += 1) {
@@ -173,6 +186,8 @@ function parseExplicitOptions(options, packageData) {
       replaceSkills = true;
     } else if (option === "--force") {
       force = true;
+    } else if (option === "--dry-run") {
+      dryRun = true;
     } else if (option === "--yes") {
       // accepted for compatibility
     } else {
@@ -193,6 +208,7 @@ function parseExplicitOptions(options, packageData) {
     notebook,
     replaceSkills,
     force,
+    dryRun,
     skills,
     instructions: [...new Map(instructions.map((target) => [target.instructionFile, target])).values()],
   };
@@ -330,6 +346,7 @@ init options:
   --replace-skills      Replace installed skill files that differ.
   --force               Replace skills owned by another package.
   --yes                 Accept defaults without prompting.
+  --dry-run             Print what would be installed without writing anything.
 
 Drawbore is provider-neutral: it does not assume a forge, registry, or CI provider.`);
 }
