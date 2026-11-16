@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.1] - 2026-11-16
 
+Published to npm as `drawbore@0.1.1` — the first release through the staged-publish pipeline (GitLab CI staged, maintainer approved with 2FA).
+
 ### Fixed
 
 - `drawbore init` with no flags now runs the interactive installer: checkbox prompts for harness locations, notebook creation, instruction files, and a final confirmation. The prompt layer existed in `lib/prompts.js` but was never wired into the CLI, so a bare `init` silently installed hardcoded defaults. Non-TTY streams (CI, pipes) still use the defaults without prompting.
