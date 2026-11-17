@@ -1,6 +1,6 @@
 {
   "version": "0.3.1",
-  "installedAt": "2026-11-17T16:54:05.996Z",
+  "installedAt": "2026-11-17T18:57:01.560Z",
   "namespace": "drawbore",
   "skills": [
     "discover",
@@ -30,8 +30,5 @@
       "skills/init-project/SKILL.md": "717bc260d9a66cad336116211535d548dc8579993c4e864eee7673d222d742aa",
       "skills/release/SKILL.md": "7600fefdee1cae8d6e6e2a63c7ac2e7e2ce0cd869e7e8acdaef0c445618268e6"
     }
-  },
-  "skillDirs": {
-    ".omp": "D:\\Personal\\drawbore\\.omp"
   }
 }

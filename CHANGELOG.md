@@ -5,13 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- `--global` is gone, along with user-level installs. `drawbore init`, `update`, and `uninstall` operate on the project only, and `--global` is rejected as an unknown option. The feature shipped in 0.3.0 and is removed here: one install path, maintained properly, beat two half-maintained ones.
+
+### Fixed
+
+- The `frame`, `recall`, and `record` skills now trigger on the notebook's presence instead of on an instruction file. `recall`'s trigger was "when a project's Drawbore instruction directs you", so in a project with a `.drawbore/` notebook that the running harness could not see — a `CLAUDE.md`-only project under OMP, or an `init --notebook` without `--instruction` — the post-work reconcile silently never ran.
+- `init` and `update` no longer splice a CRLF instruction block into an LF instruction file (or the reverse). Mixed endings are invisible to `git diff` and ship in the tarball; the block and every newline the splice adds now follow the destination file.
+
 ## [0.3.1] - 2026-11-17
 
 ### Fixed
 
 - `drawbore init` no longer reports a harness location as "already installed" because a skills directory exists there. `.claude/skills` and its siblings often hold other tools' skills, and a stale install marker can outlive the directory it described; a location now counts as installed only when this package's own skills are on disk. Affected locations read "skills directory present, Drawbore not installed" instead.
-- The `frame`, `recall`, and `record` skills now trigger on the notebook's presence instead of on an instruction file. `recall`'s trigger was "when a project's Drawbore instruction directs you", so in a project with a `.drawbore/` notebook that the running harness could not see — a `CLAUDE.md`-only project under OMP, or an `init --notebook` without `--instruction` — the post-work reconcile silently never ran.
-- `init` and `update` no longer splice a CRLF instruction block into an LF instruction file (or the reverse). Mixed endings are invisible to `git diff` and ship in the tarball; the block and every newline the splice adds now follow the destination file.
 
 ### Changed
 

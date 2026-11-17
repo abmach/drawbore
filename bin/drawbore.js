@@ -13,14 +13,12 @@ import {
   fixMechanical,
   formatInstallResult,
   inspectProject,
-  inspectUserScopes,
   installMarkerFile,
   installSkills,
   isSupportedLocation,
   loadPackageData,
   notebookDirectory,
   preflightInstall,
-  projectScope,
   readInstallMarker,
   removeInstallMarker,
   removeInstruction,
@@ -29,13 +27,12 @@ import {
   SkillConflictError,
   summarize,
   supportedLocations,
-  userScope,
   writeInstallMarker,
 } from "../lib/index.js";
 
 const CHECK_FLAGS = new Set(["--json", "--strict", "--fix"]);
-const UPDATE_FLAGS = new Set(["--dry-run", "--check", "--force", "--global"]);
-const UNINSTALL_FLAGS = new Set(["--global", "--dry-run", "--purge"]);
+const UPDATE_FLAGS = new Set(["--dry-run", "--check", "--force"]);
+const UNINSTALL_FLAGS = new Set(["--dry-run", "--purge"]);
 
 // `update --check` prints one line per divergence; the reason is the drift kind
 // `diffSkills` reports, phrased for the reader.
@@ -92,23 +89,9 @@ if (command === "check") {
     printHelp(packageData.version);
     process.exit(2);
   }
-  // A user-level install writes outside every repository, so it never needs a
-  // project root and never inspects one.
-  const global = plan?.global === true;
-  const scope = global ? userScope() : projectScope(await findProjectRoot());
-  const root = scope.root;
-  const inspection = global
-    ? await inspectUserScopes({ packageData, home: scope.root })
-    : await inspectProject(root, packageData);
+  const root = await findProjectRoot();
+  const inspection = await inspectProject(root, packageData);
   const ui = createUi();
-
-  // `--global` without `--location` may still be answered by the picker on a
-  // terminal; on a pipe or in CI there is nobody to ask, so it is an error.
-  if (plan && plan.locations === null && !ui.isInteractive) {
-    console.error("--global requires --location <dir> when no terminal is available.");
-    console.error(`Supported: ${userScope().locations.join(", ")}`);
-    process.exit(2);
-  }
 
   // No flags + non-interactive (pipe, CI, test): use the defaults rather than
   // prompting on a stream nobody is reading. The prompts layer itself falls
@@ -129,11 +112,11 @@ if (command === "check") {
 
   try {
     console.log(`Drawbore ${packageData.version}`);
-    console.log(global ? `User: ${root}` : `Project: ${root}`);
+    console.log(`Project: ${root}`);
 
     if (!plan) ui.renderProjectState(inspection);
 
-    const selectedLocations = plan?.locations ?? await pickLocations(inspection, ui, scope);
+    const selectedLocations = plan?.locations ?? await pickLocations(inspection, ui);
     if (selectedLocations.length === 0) {
       console.log("No harness locations selected. Nothing was installed.");
       process.exit(0);
@@ -148,7 +131,7 @@ if (command === "check") {
     }
     if (plan?.dryRun) {
       console.log("Dry run — nothing will be written.");
-      console.log(formatInstallResult(selectedLocations.map((location) => scope.display(location)), createNotebookDirectory, instructionTargets.map((target) => target.instructionFile), [], [], { noun: "Would install", firstInstall: false, markerFile: scope.markerFile }));
+      console.log(formatInstallResult(selectedLocations, createNotebookDirectory, instructionTargets.map((target) => target.instructionFile), [], [], { noun: "Would install", firstInstall: false }));
       process.exit(0);
     }
 
@@ -156,7 +139,7 @@ if (command === "check") {
 
     // Every destination is validated before the first write, so a conflict in
     // one location cannot leave the others installed without a marker.
-    const conflicts = await preflightInstall(root, selectedLocations, selection, { dir: scope.dir });
+    const conflicts = await preflightInstall(root, selectedLocations, selection);
     if (conflicts.length > 0 && plan?.force !== true) {
       throw new SkillConflictError(conflicts);
     }
@@ -164,17 +147,12 @@ if (command === "check") {
     const preservedSkillFiles = [];
     const replacedSkillFiles = [];
     const skillHashes = {};
-    const skillDirs = {};
 
     for (const location of selectedLocations) {
-      const result = await installSkills(root, location, selection, {
-        force: plan?.force === true,
-        dir: scope.dir,
-      });
+      const result = await installSkills(root, location, selection, { force: plan?.force === true });
       preservedSkillFiles.push(...result.preserved);
       replacedSkillFiles.push(...result.replaced);
       skillHashes[location] = result.hashes;
-      skillDirs[location] = result.dir;
     }
 
     let notebookCreated = false;
@@ -189,8 +167,8 @@ if (command === "check") {
       instructionFiles.push(target.instructionFile);
     }
 
-    await writeInstallMarker(root, selection, selectedLocations, notebookCreated ? notebookDirectory : null, [...new Set(instructionFiles)], skillHashes, { markerFile: scope.markerFile, skillDirs });
-    console.log(formatInstallResult(selectedLocations.map((location) => scope.display(location)), notebookCreated, instructionFiles, preservedSkillFiles, replacedSkillFiles, { firstInstall: !global, markerFile: scope.markerFile }));
+    await writeInstallMarker(root, selection, selectedLocations, notebookCreated ? notebookDirectory : null, [...new Set(instructionFiles)], skillHashes);
+    console.log(formatInstallResult(selectedLocations, notebookCreated, instructionFiles, preservedSkillFiles, replacedSkillFiles));
   } catch (error) {
     if (error instanceof SkillConflictError) {
       console.error(error.message);
@@ -220,18 +198,12 @@ async function runUpdate(options, packageData) {
   const dryRun = options.includes("--dry-run");
   const checkOnly = options.includes("--check");
   const force = options.includes("--force");
-  const global = options.includes("--global");
-  const scope = global ? userScope() : projectScope(await findProjectRoot());
-  const root = scope.root;
-  const marker = await readInstallMarker(root, scope.markerFile);
-  const locations = readMarkerLocations(marker, scope);
+  const root = await findProjectRoot();
+  const marker = await readInstallMarker(root);
+  const locations = readMarkerLocations(marker);
 
   if (locations.length === 0) {
-    console.error(
-      global
-        ? `No user-level Drawbore install found (${scope.markerFile}). Run \`drawbore init --global --location <dir>\` first.`
-        : "No existing Drawbore install found. Run `drawbore init` first.",
-    );
+    console.error("No existing Drawbore install found. Run `drawbore init` first.");
     process.exit(1);
   }
 
@@ -244,11 +216,10 @@ async function runUpdate(options, packageData) {
   const selection = recordedSkills === null
     ? { ...packageData }
     : { ...packageData, skills: [...new Set(recordedSkills)] };
-  const dirFor = skillDirResolver(marker, scope);
-  const drifts = await diffSkills(root, locations, selection, { dir: dirFor, markerFile: scope.markerFile });
+  const drifts = await diffSkills(root, locations, selection);
 
   console.log(`Drawbore ${packageData.version}`);
-  console.log(global ? `User: ${root}` : `Project: ${root}`);
+  console.log(`Project: ${root}`);
 
   if (checkOnly) {
     if (drifts.length === 0) {
@@ -263,24 +234,22 @@ async function runUpdate(options, packageData) {
 
   if (dryRun) {
     console.log("Dry run — nothing will be written.");
-    console.log(formatInstallResult(locations.map((location) => scope.display(location)), false, (marker.instructions ?? []).map((f) => f), [], [], { noun: "Would update", firstInstall: false, markerFile: scope.markerFile }));
+    console.log(formatInstallResult(locations, false, (marker.instructions ?? []).map((f) => f), [], [], { noun: "Would update", firstInstall: false }));
     process.exit(0);
   }
 
   const preservedSkillFiles = [];
   const replacedSkillFiles = [];
   const skillHashes = {};
-  const skillDirs = {};
   try {
-    const conflicts = await preflightInstall(root, locations, selection, { dir: dirFor });
+    const conflicts = await preflightInstall(root, locations, selection);
     if (conflicts.length > 0 && !force) throw new SkillConflictError(conflicts);
 
     for (const location of locations) {
-      const result = await installSkills(root, location, selection, { force, dir: dirFor });
+      const result = await installSkills(root, location, selection, { force });
       preservedSkillFiles.push(...result.preserved);
       replacedSkillFiles.push(...result.replaced);
       skillHashes[location] = result.hashes;
-      skillDirs[location] = result.dir;
     }
   } catch (error) {
     // `init` already turns this into a readable message; update must not dump
@@ -301,32 +270,16 @@ async function runUpdate(options, packageData) {
   // A refresh keeps the recorded notebook: `update` never creates one, and
   // nulling the field would erase the record a previous `init` wrote.
   const notebook = typeof marker.notebook === "string" ? marker.notebook : null;
-  await writeInstallMarker(root, selection, locations, notebook, [...new Set(instructionFiles)], skillHashes, { markerFile: scope.markerFile, skillDirs });
-  console.log(formatInstallResult(locations.map((location) => scope.display(location)), false, instructionFiles, preservedSkillFiles, replacedSkillFiles, { noun: "Updated", firstInstall: false, markerFile: scope.markerFile }));
+  await writeInstallMarker(root, selection, locations, notebook, [...new Set(instructionFiles)], skillHashes);
+  console.log(formatInstallResult(locations, false, instructionFiles, preservedSkillFiles, replacedSkillFiles, { noun: "Updated", firstInstall: false }));
 }
 
-// The marker records where each location was installed, so a later run under a
-// different OMP profile or XDG_CONFIG_HOME still targets the real directory.
-// A marker is repository-tracked and hand-editable, so a recorded directory is
-// honoured only while it stays inside the scope — otherwise an entry such as
-// "../../../.ssh" would turn `update` and `uninstall` into writes and deletions
-// outside the project.
-function skillDirResolver(marker, scope) {
-  const root = path.resolve(scope.root);
-  return (location) => {
-    const recorded = marker.skillDirs?.[location];
-    if (typeof recorded !== "string" || recorded.length === 0) return scope.dir(location);
-    const resolved = path.resolve(scope.root, recorded);
-    if (resolved === root || resolved.startsWith(root + path.sep)) return resolved;
-    return scope.dir(location);
-  };
-}
 
 function printUpdateHelp(version) {
   console.log(`Drawbore ${version}
 
 Usage:
-  drawbore update [--dry-run] [--check] [--force] [--global]
+  drawbore update [--dry-run] [--check] [--force]
 
 Refresh an existing install: re-copies the package's skills (preserving
 locally-modified ones) and re-applies the instruction block.
@@ -335,9 +288,7 @@ Options:
   --dry-run   Print what would change without writing anything.
   --check     Report drift only; exit 1 if a skill is missing, foreign, or differs
               from the package.
-  --force     Replace skills owned by another package (ownership conflicts).
-  --global    Refresh the user-level install recorded in ~/.config/drawbore/install.json
-              instead of the project install.`);
+  --force     Replace skills owned by another package (ownership conflicts).`);
 }
 
 // `drawbore uninstall` reverses an install: it removes the skills this install
@@ -353,25 +304,14 @@ async function runUninstall(options, packageData) {
     }
   }
 
-  const global = options.includes("--global");
   const dryRun = options.includes("--dry-run");
   const purge = options.includes("--purge");
-  if (purge && global) {
-    console.error("--purge deletes a project notebook; a user-level install has none.");
-    process.exit(2);
-  }
-
-  const scope = global ? userScope() : projectScope(await findProjectRoot());
-  const root = scope.root;
-  const marker = await readInstallMarker(root, scope.markerFile);
-  const locations = readMarkerLocations(marker, scope);
+  const root = await findProjectRoot();
+  const marker = await readInstallMarker(root);
+  const locations = readMarkerLocations(marker);
 
   if (locations.length === 0) {
-    console.error(
-      global
-        ? `No user-level Drawbore install found (${scope.markerFile}). Run \`drawbore init --global --location <dir>\` first.`
-        : "No Drawbore install found. Run `drawbore init` first.",
-    );
+    console.error("No Drawbore install found. Run `drawbore init` first.");
     process.exit(1);
   }
 
@@ -383,15 +323,10 @@ async function runUninstall(options, packageData) {
   const selection = { ...packageData, skills: [...new Set(recordedSkills)] };
 
   console.log(`Drawbore ${packageData.version}`);
-  console.log(global ? `User: ${root}` : `Project: ${root}`);
+  console.log(`Project: ${root}`);
   if (dryRun) console.log("Dry run — nothing will be written.");
 
-  const removed = await removeSkills(root, locations, selection, {
-    dir: skillDirResolver(marker, scope),
-    markerFile: scope.markerFile,
-    display: scope.display,
-    dryRun,
-  });
+  const removed = await removeSkills(root, locations, selection, { dryRun });
 
   const instructions = [];
   for (const instructionFile of marker.instructions ?? []) {
@@ -405,12 +340,12 @@ async function runUninstall(options, packageData) {
   }
 
   const notebookRemoved = purge && (dryRun || await removeNotebook(root));
-  if (!dryRun) await removeInstallMarker(root, scope.markerFile);
+  if (!dryRun) await removeInstallMarker(root);
 
   console.log(formatUninstallResult(removed, {
     noun: dryRun ? "Would uninstall" : "Uninstalled",
     instructions,
-    markerFile: scope.markerFile,
+    markerFile: installMarkerFile,
     notebookRemoved,
     dryRun,
   }));
@@ -440,15 +375,13 @@ function printUninstallHelp(version) {
   console.log(`Drawbore ${version}
 
 Usage:
-  drawbore uninstall [--global] [--dry-run] [--purge]
+  drawbore uninstall [--dry-run] [--purge]
 
 Reverse an install: remove the skills this install owns, the Drawbore block from
 each recorded instruction file, and the install marker. The notebook survives
 unless --purge is passed, and a locally modified skill is kept whole.
 
 Options:
-  --global    Uninstall the user-level install recorded in
-              ~/.config/drawbore/install.json instead of the project install.
   --dry-run   Print what would be removed without writing anything.
   --purge     Also delete the .drawbore/ notebook and its .gitignore note.`);
 }
@@ -464,23 +397,15 @@ function parseExplicitOptions(options, packageData) {
   let force = false;
   let dryRun = false;
   let skills = null;
-  // Pre-scanned so `--location` validates against the right allowlist whatever
-  // order the flags arrive in.
-  const global = options.includes("--global");
 
   for (let index = 0; index < options.length; index += 1) {
     const option = options[index];
     if (option === "--location") {
       const value = options[++index];
       if (value === undefined) throw new Error("Missing value for --location");
-      // The scope decides the allowlist: a user-level install accepts only the
-      // locations that harness reads from the home directory.
-      const allowed = global ? userScope().locations : Object.keys(supportedLocations);
       for (const location of splitList(value)) {
-        if (!allowed.includes(location)) {
-          throw new Error(
-            `Unsupported ${global ? "user-level " : ""}location: ${location}. Supported: ${allowed.join(", ")}`,
-          );
+        if (!isSupportedLocation(location)) {
+          throw new Error(`Unsupported location: ${location}. Supported: ${Object.keys(supportedLocations).join(", ")}`);
         }
         locations.push(location);
       }
@@ -504,30 +429,11 @@ function parseExplicitOptions(options, packageData) {
       force = true;
     } else if (option === "--dry-run") {
       dryRun = true;
-    } else if (option === "--global") {
-      // already read above
     } else if (option === "--yes") {
       // accepted for compatibility
     } else {
       throw new Error(`Unknown option: ${option}`);
     }
-  }
-
-
-  if (global) {
-    // A user-level install writes outside every repository: skills only, and
-    // only where the developer said.
-    if (notebook === true) throw new Error("--global does not create a notebook; .drawbore/ is per-project");
-    if (instructions.length > 0) throw new Error("--global installs skills only; --instruction applies to a project");
-    return {
-      locations: locations.length === 0 ? null : [...new Set(locations)],
-      notebook: false,
-      force,
-      dryRun,
-      skills,
-      global,
-      instructions: [],
-    };
   }
 
   if (locations.length === 0) locations.push(".agents");
@@ -545,14 +451,13 @@ function parseExplicitOptions(options, packageData) {
     dryRun,
     skills,
     instructions: [...new Map(instructions.map((target) => [target.instructionFile, target])).values()],
-    global,
   };
 }
 
-async function pickLocations(inspection, ui, scope) {
+async function pickLocations(inspection, ui) {
   const choices = buildLocationChoices(inspection);
   const selected = await ui.selectLocations(choices);
-  return validateSelectedLocations(selected, scope);
+  return validateSelectedLocations(selected);
 }
 
 async function pickNotebook(ui, inspection) {
@@ -580,11 +485,11 @@ async function pickInstructions(selectedLocations, inspection, ui) {
   return picked.map((instructionFile) => ({ instructionFile }));
 }
 
-function validateSelectedLocations(selected, scope) {
+function validateSelectedLocations(selected) {
   if (!selected || selected.length === 0) {
     return [];
   }
-  const allowed = scope ? scope.locations : Object.keys(supportedLocations);
+  const allowed = Object.keys(supportedLocations);
   const invalid = selected.filter((location) => !allowed.includes(location));
   if (invalid.length > 0) {
     throw new Error(`Unsupported location(s): ${invalid.join(", ")}. Supported: ${allowed.join(", ")}`);
@@ -597,11 +502,11 @@ function splitList(value) {
 }
 
 // The install marker is repository-tracked and hand-editable, so it is a trust
-// boundary: an entry outside the scope's documented locations would otherwise
-// become a write target outside the project root (or the home directory).
-function readMarkerLocations(marker, scope) {
+// boundary: an entry outside the documented locations would otherwise become a
+// write target outside the project root.
+function readMarkerLocations(marker) {
   const recorded = Array.isArray(marker.locations) ? marker.locations : [];
-  const allowed = scope ? scope.locations : Object.keys(supportedLocations);
+  const allowed = Object.keys(supportedLocations);
   const invalid = recorded.filter((location) => !allowed.includes(location));
   if (invalid.length > 0) {
     console.error(`Install marker lists unsupported location(s): ${invalid.join(", ")}`);
@@ -676,9 +581,9 @@ function printHelp(version) {
 
 Usage:
   drawbore init [options]
-  drawbore update [--dry-run] [--check] [--force] [--global]
+  drawbore update [--dry-run] [--check] [--force]
   drawbore check [--json] [--strict] [--fix]
-  drawbore uninstall [--global] [--dry-run] [--purge]
+  drawbore uninstall [--dry-run] [--purge]
   drawbore --version
   drawbore --help
 
@@ -692,17 +597,13 @@ init options:
   --force               Replace skills owned by another package.
   --yes                 Accept defaults without prompting.
   --dry-run             Print what would be installed without writing anything.
-  --global              Install into user-level skill directories instead of the
-                        project (requires --location; skills only, no notebook).
 
 update options:
   --dry-run             Print what would change without writing anything.
   --check               Report drift only; exit 1 if the install differs from the package.
   --force               Replace skills owned by another package.
-  --global              Refresh the user-level install instead of the project install.
 
 uninstall options:
-  --global              Uninstall the user-level install instead of the project install.
   --dry-run             Print what would be removed without writing anything.
   --purge               Also delete the .drawbore/ notebook and its .gitignore note.
 

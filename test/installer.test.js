@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { addInstruction, createNotebook, inspectProject, inspectUserScopes, installSkills, loadPackageData } from "../lib/installer.js";
+import { addInstruction, createNotebook, inspectProject, installSkills, loadPackageData } from "../lib/installer.js";
 
 const packageData = await loadPackageData();
 const tempDirs = [];
@@ -120,22 +120,6 @@ test("inspectProject reports a foreign skills directory as not installed", async
     assert.equal(after.locations.find((location) => location.path === ".claude").installed, true);
   } finally {
     await rm(root, { recursive: true, force: true });
-  }
-});
-
-test("inspectUserScopes reports a foreign user skills directory as not installed", async () => {
-  const home = await mkdtemp(path.join(os.tmpdir(), "drawbore-home-"));
-  try {
-    await mkdir(path.join(home, ".claude", "skills", "graphify"), { recursive: true });
-    await writeFile(path.join(home, ".claude", "skills", "graphify", "SKILL.md"), "# Graphify\n");
-
-    const scopes = await inspectUserScopes({ home, packageData });
-    const claude = scopes.locations.find((location) => location.path === ".claude");
-
-    assert.equal(claude.skillsExist, true);
-    assert.equal(claude.installed, false);
-  } finally {
-    await rm(home, { recursive: true, force: true });
   }
 });
 
