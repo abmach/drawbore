@@ -9,6 +9,7 @@ Drawbore keeps a repository's durable context together: purpose, principles, dec
 - package shape: node-lib (CLI)
 - build needed before release: no
 - version stamps: `package.json`
+- dogfooded install: `.drawbore-install.json` must match `package.json`; refresh it with `node bin/drawbore.js update` after the bump. `test/dogfood.test.js` fails when it drifts.
 - publish targets: npm
 - publish mode: staged
 - pipeline: `.gitlab-ci.yml`

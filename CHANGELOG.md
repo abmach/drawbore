@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - 2026-11-17
 
 ### Removed
 
@@ -116,6 +116,7 @@ Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged releas
 - Skill conflicts are decided by content rather than by name. A skill directory is foreign only when its contents diverge from what the package ships; a file/directory mismatch is preserved instead of blocking the install.
 - `release` branches on `publish mode` and `pipeline`, reading them from `AGENTS.md`. Sections written before those fields existed are still handled: the mode is inferred from the prose and the CI file, and the package field is read as either `package` or `npm package`.
 
+[0.4.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.3.1...v0.4.0
 [0.3.1]: https://gitlab.com/abmach/drawbore/-/compare/v0.3.0...v0.3.1
 [0.3.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.2.1...v0.3.0
 [0.2.1]: https://gitlab.com/abmach/drawbore/-/compare/v0.2.0...v0.2.1
