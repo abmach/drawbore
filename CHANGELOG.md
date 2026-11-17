@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `drawbore init` no longer reports a harness location as "already installed" because a skills directory exists there. `.claude/skills` and its siblings often hold other tools' skills, and a stale install marker can outlive the directory it described; a location now counts as installed only when this package's own skills are on disk. Affected locations read "skills directory present, Drawbore not installed" instead.
+- The `frame`, `recall`, and `record` skills now trigger on the notebook's presence instead of on an instruction file. `recall`'s trigger was "when a project's Drawbore instruction directs you", so in a project with a `.drawbore/` notebook that the running harness could not see — a `CLAUDE.md`-only project under OMP, or an `init --notebook` without `--instruction` — the post-work reconcile silently never ran.
 
 ### Changed
 

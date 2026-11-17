@@ -77,6 +77,19 @@ test("skills that gate on a decision say how to ask for it", async () => {
   }
 });
 
+test("the gated three trigger on the notebook, not on an instruction file", async () => {
+  // A notebook can exist without a Drawbore block the current harness reads
+  // (a CLAUDE.md-only project under OMP, or an init with --notebook alone).
+  // If the trigger is "a Drawbore instruction directs you", recall never fires
+  // and the post-work reconcile silently never happens.
+  for (const skill of GATED) {
+    const matter = frontMatter(await skillText(skill));
+    const description = matter.match(/^description: (.+)$/m)?.[1] ?? "";
+    assert.match(description, /Drawbore notebook \(`\.drawbore\/index\.md`\)/, `${skill}/SKILL.md does not trigger on the notebook`);
+    assert.doesNotMatch(description, /Drawbore instruction directs you/, `${skill}/SKILL.md still waits for an instruction file`);
+  }
+});
+
 test("skills without an approval gate do not claim one", async () => {
   for (const skill of NOT_GATED_ON_ANSWER) {
     const text = await skillText(skill);

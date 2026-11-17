@@ -1,6 +1,6 @@
 ---
 name: record
-description: Use this skill when durable project knowledge crystallizes and should be recorded with developer confirmation, including glossary terms, principles, consequential decisions, current system behavior, technical choices, or the durable consequences of a Change Brief. Also use when the developer says to remember, register, amend, or supersede project context. Requires a Drawbore notebook (`.drawbore/index.md` at the repository root); check for it first, and if it is absent do not create it — tell the developer to run `npx drawbore init`.
+description: Use this skill in a project with a Drawbore notebook (`.drawbore/index.md`) when durable project knowledge crystallizes and should be recorded with developer confirmation, including glossary terms, principles, consequential decisions, current system behavior, technical choices, or the durable consequences of a Change Brief. Also use when the developer says to remember, register, amend, or supersede project context. Requires a Drawbore notebook (`.drawbore/index.md` at the repository root); check for it first, and if it is absent do not create it — tell the developer to run `npx drawbore init`.
 license: MIT
 ---
 
