@@ -3,14 +3,21 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 
-// The notebook precondition is stated twice per skill: in the description,
-// which the model reads at selection time before it has looked at the
-// filesystem, and in the first line of the body, which it reads once the skill
-// is loaded. The two must not drift apart, and neither may drift between the
-// skills that need a notebook — so the contract is asserted here.
+// The notebook gate is stated twice per skill: in the description, which the
+// model reads at selection time before it has looked at the filesystem, and in
+// the first line of the body, which it reads once the skill is loaded. The
+// description names the file so the model can check it; the body carries the
+// stop. Skills that write a notebook also say so in the description, because
+// that is the case where creating one would be a mistake.
 
-const DESCRIPTION_CLAUSE =
-  "Requires a Drawbore notebook (`.drawbore/index.md` at the repository root); check for it first, and if it is absent do not create it — tell the developer to run `npx drawbore init`.";
+const TRIGGER = "in a project with a Drawbore notebook (`.drawbore/index.md` at the repository root)";
+
+// `recall` only reads: if the notebook is gone there is nothing to consult.
+const READ_CLAUSE = "If it is missing, the project is not initialized.";
+
+// `frame` and `record` write into `.drawbore/`; without this they could
+// bootstrap a notebook in a project that never ran `drawbore init`.
+const WRITE_CLAUSE = "If it is missing, do not create it — run `npx drawbore init`.";
 
 const BODY_CLAUSE =
   "Requires `.drawbore/index.md` at the repository root. If it is absent, stop: this project is not initialized with Drawbore. Do not create the notebook or any record — tell the developer to run `npx drawbore init` and offer to continue afterwards.";
@@ -18,6 +25,8 @@ const BODY_CLAUSE =
 // Skills that read or write the notebook. `discover` bootstraps it, and
 // `review`, `release`, and `init-project` work without one.
 const GATED = ["frame", "recall", "record"];
+const WRITERS = ["frame", "record"];
+const READERS = ["recall"];
 const UNGATED = ["discover", "init-project", "release", "review"];
 
 const skillsDir = path.resolve("skills");
@@ -53,11 +62,17 @@ test("every skill ships front matter with a single-line description", async () =
   }
 });
 
-test("skills that read or write the notebook state the precondition twice", async () => {
+test("skills that read or write the notebook state the gate twice", async () => {
   for (const skill of GATED) {
     const text = await skillText(skill);
-    assert.ok(text.includes(DESCRIPTION_CLAUSE), `${skill}/SKILL.md description lost the notebook precondition`);
+    assert.ok(text.includes(TRIGGER), `${skill}/SKILL.md description lost the notebook trigger`);
     assert.ok(text.includes(BODY_CLAUSE), `${skill}/SKILL.md body lost the no-bootstrap clause`);
+  }
+  for (const skill of WRITERS) {
+    assert.ok((await skillText(skill)).includes(WRITE_CLAUSE), `${skill}/SKILL.md must say not to create the notebook`);
+  }
+  for (const skill of READERS) {
+    assert.ok((await skillText(skill)).includes(READ_CLAUSE), `${skill}/SKILL.md lost the not-initialized clause`);
   }
 });
 
@@ -77,19 +92,6 @@ test("skills that gate on a decision say how to ask for it", async () => {
   }
 });
 
-test("the gated three trigger on the notebook, not on an instruction file", async () => {
-  // A notebook can exist without a Drawbore block the current harness reads
-  // (a CLAUDE.md-only project under OMP, or an init with --notebook alone).
-  // If the trigger is "a Drawbore instruction directs you", recall never fires
-  // and the post-work reconcile silently never happens.
-  for (const skill of GATED) {
-    const matter = frontMatter(await skillText(skill));
-    const description = matter.match(/^description: (.+)$/m)?.[1] ?? "";
-    assert.match(description, /Drawbore notebook \(`\.drawbore\/index\.md`\)/, `${skill}/SKILL.md does not trigger on the notebook`);
-    assert.doesNotMatch(description, /Drawbore instruction directs you/, `${skill}/SKILL.md still waits for an instruction file`);
-  }
-});
-
 test("skills without an approval gate do not claim one", async () => {
   for (const skill of NOT_GATED_ON_ANSWER) {
     const text = await skillText(skill);
@@ -101,7 +103,7 @@ test("skills that work without a notebook do not claim to require one", async ()
   for (const skill of UNGATED) {
     const text = await skillText(skill);
     assert.ok(
-      !text.includes(DESCRIPTION_CLAUSE),
+      !text.includes(TRIGGER),
       `${skill}/SKILL.md claims the notebook precondition but does not need a notebook`,
     );
   }

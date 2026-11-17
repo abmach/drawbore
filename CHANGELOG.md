@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `frame`, `recall`, and `record` skills now trigger on the notebook's presence instead of on an instruction file. `recall`'s trigger was "when a project's Drawbore instruction directs you", so in a project with a `.drawbore/` notebook that the running harness could not see — a `CLAUDE.md`-only project under OMP, or an `init --notebook` without `--instruction` — the post-work reconcile silently never ran.
 - `init` and `update` no longer splice a CRLF instruction block into an LF instruction file (or the reverse). Mixed endings are invisible to `git diff` and ship in the tarball; the block and every newline the splice adds now follow the destination file.
 
+### Changed
+
+- The notebook gate on `frame`, `recall`, and `record` is stated once instead of twice. The description names `.drawbore/index.md` at the repository root as the trigger and adds only the clause that applies: `recall` notes the project is not initialized, while `frame` and `record` say not to create the notebook. The body keeps the full stop. With user-level installs gone, the only remaining case is a nested repository or a deleted notebook, and the old wording paid for it twice.
+
 ## [0.3.1] - 2026-11-17
 
 ### Fixed

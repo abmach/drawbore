@@ -1,6 +1,6 @@
 ---
 name: frame
-description: Use this skill in a project with a Drawbore notebook (`.drawbore/index.md`) when a feature request, bug fix, refactor, or technical change needs brainstorming or a materially clearer scope before implementation. It collaborates with the developer to define purpose, inclusions, non-goals, change points, acceptance conditions, open questions, and consequences, then maintains a transient Change Brief. Requires a Drawbore notebook (`.drawbore/index.md` at the repository root); check for it first, and if it is absent do not create it — tell the developer to run `npx drawbore init`.
+description: Use this skill in a project with a Drawbore notebook (`.drawbore/index.md` at the repository root) when a feature request, bug fix, refactor, or technical change needs brainstorming or a materially clearer scope before implementation. It collaborates with the developer to define purpose, inclusions, non-goals, change points, acceptance conditions, open questions, and consequences, then maintains a transient Change Brief. If it is missing, do not create it — run `npx drawbore init`.
 license: MIT
 ---
 
