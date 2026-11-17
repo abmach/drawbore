@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { createNotebook, installSkills, loadPackageData } from "../lib/installer.js";
+import { addInstruction, createNotebook, installSkills, loadPackageData } from "../lib/installer.js";
 
 const packageData = await loadPackageData();
 const tempDirs = [];
@@ -78,6 +78,24 @@ test("createNotebook preserves an existing .gitignore", async () => {
     const gitignore = await readFile(path.join(root, ".gitignore"), "utf8");
     assert.match(gitignore, /^node_modules\/$/m);
     assert.match(gitignore, /tracked on purpose/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("addInstruction keeps content after an unclosed start marker", async () => {
+  const root = await makeProject();
+  try {
+    const target = path.join(root, "AGENTS.md");
+    await writeFile(target, "# Guide\n\n<!-- drawbore:start -->\nkeep this line\nmore content\n");
+
+    await addInstruction(root, "AGENTS.md", packageData);
+
+    const updated = await readFile(target, "utf8");
+    assert.equal(updated.match(/<!-- drawbore:start -->/g)?.length, 1);
+    assert.match(updated, /<!-- drawbore:end -->/);
+    assert.match(updated, /keep this line/);
+    assert.match(updated, /more content/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

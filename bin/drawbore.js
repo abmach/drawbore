@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
 import path from "node:path";
-import { readFile, stat } from "node:fs/promises";
-import { createHash } from "node:crypto";
 import {
   addInstruction,
   buildInstructionChoices,
@@ -10,26 +8,35 @@ import {
   checkNotebook,
   createNotebook,
   createUi,
+  diffSkills,
   findProjectRoot,
   fixMechanical,
+  formatInstallResult,
   inspectProject,
   installMarkerFile,
   installSkills,
+  isSupportedLocation,
   loadPackageData,
   notebookDirectory,
+  preflightInstall,
   readInstallMarker,
-  readInstallState,
-  readSkillMarker,
   SkillConflictError,
   summarize,
   supportedLocations,
   writeInstallMarker,
 } from "../lib/index.js";
 
-const hashContents = (contents) => createHash("sha256").update(contents).digest("hex");
-
 const CHECK_FLAGS = new Set(["--json", "--strict", "--fix"]);
 const UPDATE_FLAGS = new Set(["--dry-run", "--check", "--force"]);
+
+// `update --check` prints one line per divergence; the reason is the drift kind
+// `diffSkills` reports, phrased for the reader.
+const DRIFT_REASONS = Object.freeze({
+  missing: "not installed",
+  foreign: "not owned by this install",
+  conflict: "is not a directory",
+  modified: "differs from the package (a refresh preserves the local copy)",
+});
 
 const SUPPORTED_INSTRUCTIONS = new Set(["AGENTS.md", "CLAUDE.md"]);
 
@@ -57,7 +64,12 @@ if (command === "check") {
   await runCheck(args.slice(1));
 } else if (command === "update") {
   await runUpdate(args.slice(1), packageData);
+} else if (command === undefined) {
+  // Bare `drawbore` is a help request, not an error worth a one-line usage.
+  printHelp(packageData.version);
+  process.exit(2);
 } else if (command !== "init") {
+  console.error(`Unknown command: ${command}`);
   console.error("Usage: drawbore init | drawbore update | drawbore check");
   process.exit(2);
 } else {
@@ -110,12 +122,20 @@ if (command === "check") {
       process.exit(0);
     }
     if (plan?.dryRun) {
-      console.log("Dry run — nothing will be written. Would install:");
-      console.log(formatInstallResult(selectedLocations, createNotebookDirectory, instructionTargets.map((target) => target.instructionFile), [], []).replace(/^Installed:/, "  Would install:"));
+      console.log("Dry run — nothing will be written.");
+      console.log(formatInstallResult(selectedLocations, createNotebookDirectory, instructionTargets.map((target) => target.instructionFile), [], [], { noun: "Would install", firstInstall: false }));
       process.exit(0);
     }
 
     const selection = plan?.skills ? { ...packageData, skills: plan.skills } : packageData;
+
+    // Every destination is validated before the first write, so a conflict in
+    // one location cannot leave the others installed without a marker.
+    const conflicts = await preflightInstall(root, selectedLocations, selection);
+    if (conflicts.length > 0 && plan?.force !== true) {
+      throw new SkillConflictError(conflicts);
+    }
+
     const preservedSkillFiles = [];
     const replacedSkillFiles = [];
     const skillHashes = {};
@@ -141,7 +161,7 @@ if (command === "check") {
       instructionFiles.push(target.instructionFile);
     }
 
-    await writeInstallMarker(root, selection, selectedLocations, notebookCreated, [...new Set(instructionFiles)], skillHashes);
+    await writeInstallMarker(root, selection, selectedLocations, notebookCreated ? notebookDirectory : null, [...new Set(instructionFiles)], skillHashes);
     console.log(formatInstallResult(selectedLocations, notebookCreated, instructionFiles, preservedSkillFiles, replacedSkillFiles));
   } catch (error) {
     if (error instanceof SkillConflictError) {
@@ -174,47 +194,35 @@ async function runUpdate(options, packageData) {
   const force = options.includes("--force");
   const root = await findProjectRoot();
   const marker = await readInstallMarker(root);
-  const locations = Array.isArray(marker.locations) ? marker.locations : [];
+  const locations = readMarkerLocations(marker);
 
   if (locations.length === 0) {
     console.error("No existing Drawbore install found. Run `drawbore init` first.");
     process.exit(1);
   }
 
-  const { previousHashes, installNamespace } = await readInstallState(root, locations[0]);
-  const selection = { ...packageData };
-  const drift = [];
-
-  // Drift means "a skill directory this install does not own" — the same
-  // ownership question `init` answers, so a foreign skill blocks update without
-  // --force just as it blocks a rerun. A skill with a matching marker is ours.
-  // Otherwise, if the install marker recorded hashes for it, it is ours only
-  // while the current bytes still hash-match what was recorded; a hand copy
-  // over an installed skill with no marker is drift.
-  for (const location of locations) {
-    const destination = path.join(root, location, "skills");
-    for (const skill of selection.skills) {
-      const target = path.join(destination, skill);
-      if (!(await stat(target).then((s) => s.isDirectory()).catch(() => false))) continue;
-      if (await readSkillMarker(target).then((m) => m?.namespace === packageData.namespace)) continue;
-      const recorded = previousHashes[`skills/${skill}/SKILL.md`];
-      if (installNamespace === packageData.namespace && recorded !== undefined) {
-        const current = await readFile(path.join(target, "SKILL.md")).then((b) => hashContents(b)).catch(() => null);
-        if (current === recorded) continue;
-      }
-      drift.push(`${location}/skills/${skill} is not owned by this install`);
-    }
-  }
+  // The marker records what the user asked for: `init --skills` installs a
+  // subset, and `update` must not widen it behind their back. A marker without
+  // a skills list (older install) refreshes the full set.
+  const recordedSkills = Array.isArray(marker.skills)
+    ? marker.skills.filter((skill) => packageData.skills.includes(skill))
+    : null;
+  const selection = recordedSkills === null
+    ? { ...packageData }
+    : { ...packageData, skills: [...new Set(recordedSkills)] };
+  const drifts = await diffSkills(root, locations, selection);
 
   console.log(`Drawbore ${packageData.version}`);
   console.log(`Project: ${root}`);
 
   if (checkOnly) {
-    if (drift.length === 0) {
+    if (drifts.length === 0) {
       console.log("No drift detected. Installed skills match this package.");
       process.exit(0);
     }
-    for (const line of drift) console.log(`- ${line}`);
+    for (const drift of drifts) {
+      console.log(`- ${drift.location}/skills/${drift.skill}: ${DRIFT_REASONS[drift.reason] ?? drift.reason}`);
+    }
     process.exit(1);
   }
 
@@ -227,11 +235,24 @@ async function runUpdate(options, packageData) {
   const preservedSkillFiles = [];
   const replacedSkillFiles = [];
   const skillHashes = {};
-  for (const location of locations) {
-    const result = await installSkills(root, location, selection, { force });
-    preservedSkillFiles.push(...result.preserved);
-    replacedSkillFiles.push(...result.replaced);
-    skillHashes[location] = result.hashes;
+  try {
+    const conflicts = await preflightInstall(root, locations, selection);
+    if (conflicts.length > 0 && !force) throw new SkillConflictError(conflicts);
+
+    for (const location of locations) {
+      const result = await installSkills(root, location, selection, { force });
+      preservedSkillFiles.push(...result.preserved);
+      replacedSkillFiles.push(...result.replaced);
+      skillHashes[location] = result.hashes;
+    }
+  } catch (error) {
+    // `init` already turns this into a readable message; update must not dump
+    // the stack at a user who only needs the --force hint.
+    if (error instanceof SkillConflictError) {
+      console.error(error.message);
+      process.exit(1);
+    }
+    throw error;
   }
 
   const instructionFiles = [];
@@ -240,7 +261,10 @@ async function runUpdate(options, packageData) {
     instructionFiles.push(instructionFile);
   }
 
-  await writeInstallMarker(root, selection, locations, false, [...new Set(instructionFiles)], skillHashes);
+  // A refresh keeps the recorded notebook: `update` never creates one, and
+  // nulling the field would erase the record a previous `init` wrote.
+  const notebook = typeof marker.notebook === "string" ? marker.notebook : null;
+  await writeInstallMarker(root, selection, locations, notebook, [...new Set(instructionFiles)], skillHashes);
   console.log(formatInstallResult(locations, false, instructionFiles, preservedSkillFiles, replacedSkillFiles, { noun: "Updated", firstInstall: false }));
 }
 
@@ -255,7 +279,8 @@ locally-modified ones) and re-applies the instruction block.
 
 Options:
   --dry-run   Print what would change without writing anything.
-  --check     Report drift only; exit 1 if the install differs from the package.
+  --check     Report drift only; exit 1 if a skill is missing, foreign, or differs
+              from the package.
   --force     Replace skills owned by another package (ownership conflicts).`);
 }
 
@@ -360,7 +385,7 @@ function validateSelectedLocations(selected) {
   if (!selected || selected.length === 0) {
     return [];
   }
-  const invalid = selected.filter((location) => !(location in supportedLocations));
+  const invalid = selected.filter((location) => !isSupportedLocation(location));
   if (invalid.length > 0) {
     throw new Error(`Unsupported location(s): ${invalid.join(", ")}`);
   }
@@ -369,6 +394,20 @@ function validateSelectedLocations(selected) {
 
 function splitList(value) {
   return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+// The install marker is repository-tracked and hand-editable, so it is a trust
+// boundary: an entry outside the documented locations would otherwise become a
+// write target outside the project root.
+function readMarkerLocations(marker) {
+  const recorded = Array.isArray(marker.locations) ? marker.locations : [];
+  const invalid = recorded.filter((location) => !isSupportedLocation(location));
+  if (invalid.length > 0) {
+    console.error(`Install marker lists unsupported location(s): ${invalid.join(", ")}`);
+    console.error(`Supported: ${Object.keys(supportedLocations).join(", ")}. Fix ${installMarkerFile} or run \`drawbore init\`.`);
+    process.exit(1);
+  }
+  return [...new Set(recorded)];
 }
 
 async function runCheck(options) {
@@ -385,15 +424,17 @@ async function runCheck(options) {
   const root = await findProjectRoot();
   const notebookDir = path.join(root, notebookDirectory);
 
+  let fixReport = null;
   if (fix) {
     const { fixed } = await fixMechanical(notebookDir);
-    if (json) {
-      console.log(JSON.stringify({ fixed, changed: fixed.length > 0 }, null, 2));
-    } else if (fixed.length === 0) {
-      console.log("Nothing to fix.");
-    } else {
-      for (const item of fixed) {
-        console.log(`fixed ${item.code} ${item.file}: ${item.message}`);
+    fixReport = { fixed, changed: fixed.length > 0 };
+    if (!json) {
+      if (fixed.length === 0) {
+        console.log("Nothing to fix.");
+      } else {
+        for (const item of fixed) {
+          console.log(`fixed ${item.code} ${item.file}: ${item.message}`);
+        }
       }
     }
   }
@@ -402,7 +443,10 @@ async function runCheck(options) {
   const summary = summarize(findings);
 
   if (json) {
+    // One document for both --fix and --json: two concatenated objects are not
+    // parseable, which would break the flag's machine-readable contract.
     console.log(JSON.stringify({
+      ...fixReport,
       ok: summary.ok,
       errors: summary.errors,
       warnings: summary.warnings,
@@ -420,20 +464,6 @@ async function runCheck(options) {
 
   const failed = !summary.ok || (strict && summary.warnings.length > 0);
   process.exit(failed ? 1 : 0);
-}
-
-function formatInstallResult(locations, notebookCreated, instructionFiles, preservedSkillFiles, replacedSkillFiles, { noun = "Installed", firstInstall = true } = {}) {
-  const lines = ["", `${noun}:`];
-  for (const location of locations) lines.push(`- skills: ${location}/skills/`);
-  if (notebookCreated) lines.push(`- record: ${notebookDirectory}/`);
-  for (const file of instructionFiles) lines.push(`- instruction: ${file}`);
-  lines.push(`- marker: ${installMarkerFile}`);
-  if (preservedSkillFiles.length > 0) lines.push("", `Preserved ${preservedSkillFiles.length} file(s).`);
-  if (replacedSkillFiles.length > 0) lines.push(`Replaced ${replacedSkillFiles.length} file(s).`);
-  if (firstInstall) {
-    lines.push("", "Run the discover skill in your agent to propose the first durable records.");
-  }
-  return lines.join("\n");
 }
 
 function printCheckHelp(version) {

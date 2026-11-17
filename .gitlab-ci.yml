@@ -14,9 +14,37 @@
 # Staged publishing requires npm CLI >= 11.15 / Node >= 22.14.
 # node:24 bundles an older npm, so upgrade explicitly.
 
+# The suite must run before a tag reaches the publish job, and on every branch
+# and merge request — otherwise the first execution of `npm test` happens
+# inside the release job, after the version bump. Node 20 is tested because
+# `engines` promises `>=20`; the publish job runs the newest LTS.
+test:
+  stage: test
+  image: node:24
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_TAG'
+  script:
+    - npm ci
+    - npm test
+
+test-node20:
+  stage: test
+  image: node:20
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_TAG'
+  script:
+    - npm ci
+    - npm test
+
 stage-npm:
   stage: deploy
   image: node:24
+  needs:
+    - test
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
   id_tokens:
@@ -28,7 +56,9 @@ stage-npm:
     SIGSTORE_ID_TOKEN:
       aud: sigstore
   script:
-    - npm install -g npm@11
+    # Staged publishing needs npm >= 11.15; pin the floor so the resolved
+    # minor is reproducible instead of drifting with the npm@11 tag.
+    - npm install -g npm@^11.15
     - npm ci
     - npm test
     - PKG_NAME=$(node -p "require('./package.json').name")

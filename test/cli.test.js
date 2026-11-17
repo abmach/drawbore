@@ -35,15 +35,10 @@ test("bare init in a non-TTY installs the defaults without prompting", async () 
   }
 });
 
-test("the CLI imports the interactive prompt builders", async () => {
-  const source = await readFile(cli, "utf8");
-  assert.match(source, /createUi/);
-  assert.match(source, /buildLocationChoices/);
-  assert.match(source, /buildInstructionChoices/);
-  assert.match(source, /ui\.selectLocations/);
-  assert.match(source, /ui\.selectInstructions/);
-  assert.match(source, /ui\.confirm/);
-});
+// The former "the CLI imports the interactive prompt builders" test asserted
+// on source text instead of behaviour; the interactive path is covered by
+// prompts.test.js ("TTY ui delegates to the injected prompts module") and the
+// non-TTY defaults test above.
 
 
 test("--version prints the package version", async () => {
@@ -79,6 +74,22 @@ test("--help lists the commands and flags", async () => {
     ]) {
       assert.match(result.stdout, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("bare drawbore prints the full help; an unknown command is rejected", async () => {
+  const root = await repo();
+  try {
+    const bare = run(root, []);
+    assert.equal(bare.status, 2);
+    assert.match(bare.stdout, /Usage:\n  drawbore init/);
+    assert.match(bare.stdout, /init options:/);
+
+    const unknown = run(root, ["bogus"]);
+    assert.equal(unknown.status, 2);
+    assert.match(unknown.stderr, /Unknown command: bogus/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -214,6 +225,8 @@ test("init --dry-run prints the plan without writing anything", async () => {
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /Dry run/);
     assert.match(result.stdout, /Would install/);
+    assert.doesNotMatch(result.stdout, /^Installed:$/m);
+    assert.doesNotMatch(result.stdout, /Run the discover skill/);
     await assert.rejects(readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md")));
     await assert.rejects(readFile(path.join(root, ".drawbore", "index.md")));
   } finally {
@@ -354,6 +367,134 @@ test("check rejects unknown options with exit 2", async () => {
     const result = run(root, ["check", "--jsn"]);
     assert.equal(result.status, 2);
     assert.match(result.stderr, /Unknown option for check: --jsn/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update rejects marker locations outside the supported set", async () => {
+  const root = await repo();
+  const escaped = path.join(root, "..", "escaped");
+  try {
+    await rm(escaped, { recursive: true, force: true });
+    await writeFile(
+      path.join(root, ".drawbore-install.json"),
+      `${JSON.stringify({ namespace: "drawbore", version: "0.0.0", skills: ["discover"], locations: ["../escaped"], instructions: [] })}\n`,
+    );
+
+    const result = run(root, ["update"]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /unsupported location/);
+    assert.doesNotMatch(result.stderr, /SkillConflictError/);
+    await assert.rejects(readdir(escaped));
+  } finally {
+    await rm(escaped, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update keeps the skill subset recorded at init", async () => {
+  const root = await repo();
+  const markerPath = path.join(root, ".drawbore-install.json");
+  try {
+    assert.equal(run(root, ["init", "--skills", "discover", "--yes"]).status, 0);
+
+    const result = run(root, ["update"]);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual((await readdir(path.join(root, ".agents", "skills"))).sort(), ["discover"]);
+    assert.deepEqual(JSON.parse(await readFile(markerPath, "utf8")).skills, ["discover"]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update keeps the recorded notebook", async () => {
+  const root = await repo();
+  const markerPath = path.join(root, ".drawbore-install.json");
+  try {
+    assert.equal(run(root, ["init", "--notebook", "--yes"]).status, 0);
+    assert.equal(JSON.parse(await readFile(markerPath, "utf8")).notebook, ".drawbore");
+
+    const result = run(root, ["update"]);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(JSON.parse(await readFile(markerPath, "utf8")).notebook, ".drawbore");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update reports an ownership conflict without a stack trace", async () => {
+  const root = await repo();
+  const foreign = path.join(root, ".agents", "skills", "frame");
+  try {
+    assert.equal(run(root, ["init", "--yes"]).status, 0);
+    await rm(foreign, { recursive: true, force: true });
+    await mkdir(foreign, { recursive: true });
+    await writeFile(path.join(foreign, "SKILL.md"), "# foreign\n");
+
+    const result = run(root, ["update"]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /will not overwrite skills it does not own/);
+    assert.match(result.stderr, /--force/);
+    assert.doesNotMatch(result.stderr, /SkillConflictError/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update --check reports a modified skill and a missing one", async () => {
+  const root = await repo();
+  try {
+    assert.equal(run(root, ["init", "--yes"]).status, 0);
+    await writeFile(path.join(root, ".agents", "skills", "recall", "SKILL.md"), "# Local customization\n");
+    await rm(path.join(root, ".agents", "skills", "release"), { recursive: true, force: true });
+
+    const result = run(root, ["update", "--check"]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /skills\/recall: differs from the package/);
+    assert.match(result.stdout, /skills\/release: not installed/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("check --json --fix emits one parseable document", async () => {
+  const root = await notebookRepo({
+    "decisions/0007-record.md": `---\nid: 6\nstatus: accepted\n---\n\n# Record\n`,
+  });
+  try {
+    const result = run(root, ["check", "--json", "--fix"]);
+
+    assert.equal(result.status, 0, result.stdout);
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.changed, true);
+    assert.equal(payload.fixed.length, 1);
+    assert.equal(payload.ok, true);
+    assert.deepEqual(payload.errors, []);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("init leaves nothing behind when a later location conflicts", async () => {
+  const root = await repo();
+  const foreign = path.join(root, ".cursor", "skills", "frame");
+  try {
+    await mkdir(foreign, { recursive: true });
+    await writeFile(path.join(foreign, "SKILL.md"), "# foreign\n");
+
+    const result = run(root, ["init", "--location", ".agents,.cursor", "--yes"]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /will not overwrite skills it does not own/);
+    assert.doesNotMatch(result.stderr, /SkillConflictError/);
+    await assert.rejects(readdir(path.join(root, ".agents", "skills")));
+    await assert.rejects(readFile(path.join(root, ".drawbore-install.json")));
   } finally {
     await rm(root, { recursive: true, force: true });
   }

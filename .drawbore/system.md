@@ -16,4 +16,14 @@
 
 - npm package `drawbore`; CLI binary `drawbore`.
 
+## Update
+
+- `drawbore update` — refreshes an existing install from the install marker: re-copies the package's skills (preserving locally modified ones), re-applies the instruction block, and refreshes the marker. It never creates a notebook and never prompts for locations.
+- Flags: `--dry-run` (preview), `--check` (drift report; exit 1 when a skill is missing, foreign, a path conflict, or modified relative to the package), `--force` (replace skills owned by another package).
+
+## Update
+
+- `drawbore update` — refreshes an existing install from the install marker: re-copies the package's skills (preserving locally modified ones), re-applies the instruction block, and refreshes the marker. It never creates a notebook and never prompts for locations.
+- Flags: `--dry-run` (preview), `--check` (drift report; exit 1 when a skill is missing, foreign, a path conflict, or modified relative to the package), `--force` (replace skills owned by another package).
+
 _Rewritten in place when behavior changes; decisions retain the history._

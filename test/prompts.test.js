@@ -1,34 +1,23 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 
 import {
   buildInstructionChoices,
   buildLocationChoices,
-  createSpinner,
   createUi,
   formatInstallResult,
 } from "../lib/prompts.js";
 
 const LOCATIONS = [".agents", ".claude", ".codex", ".cursor", ".omp", ".opencode"];
 
-test("every @inquirer/prompts name destructured in lib/prompts.js is a real export", async () => {
-  const source = await readFile("lib/prompts.js", "utf8");
-  const destructured = new Set();
-  for (const match of source.matchAll(/const \{([^}]+)\}[^;]*?await load\(\)/g)) {
-    for (const part of match[1].split(",")) {
-      const name = part.trim().split(":")[0].trim();
-      if (name) destructured.add(name);
-    }
-  }
-
-  assert.ok(destructured.size > 0, "expected at least one destructured prompt");
-
+// The UI destructures components out of @inquirer/prompts at runtime; a typo
+// there (the historical case: `multiselect` does not exist) crashes the run.
+// Pin the contract on the package, not on the source text.
+test("the interactive prompts module exports the components the UI calls", async () => {
   const inquirer = await import("@inquirer/prompts");
-  for (const name of destructured) {
-    assert.equal(typeof inquirer[name], "function", `expected @inquirer/prompts.${name} to be a function`);
-  }
+  assert.equal(typeof inquirer.checkbox, "function");
+  assert.equal(typeof inquirer.confirm, "function");
 });
 
 test("buildLocationChoices covers six locations and starts with nothing selected", () => {
@@ -130,23 +119,25 @@ test("TTY ui delegates to the injected prompts module", async () => {
   assert.ok(messages.some((message) => /Install\?/.test(message)));
 });
 
-test("createSpinner is silent when stderr is not a TTY", () => {
-  const stderr = new PassThrough();
-  stderr.resume();
-  const stop = createSpinner({ message: "Installing…", stderr });
-  stop();
-});
-
-test("formatInstallResult mirrors the CLI installed summary", () => {
+test("formatInstallResult renders the install summary with the discover hint", () => {
   const text = formatInstallResult([".agents"], true, ["AGENTS.md"], [], []);
-  assert.match(text, /Installed:/);
+  assert.match(text, /^Installed:/m);
   assert.match(text, /skills: \.agents\/skills\//);
-  assert.match(text, /notebook: \.drawbore\//);
+  assert.match(text, /record: \.drawbore\//);
   assert.match(text, /instruction: AGENTS\.md/);
   assert.match(text, /marker: \.drawbore-install\.json/);
+  assert.match(text, /Run the discover skill/);
 });
 
-test("formatInstallResult deduplicates instruction files", () => {
-  const text = formatInstallResult([".agents", ".claude"], false, ["AGENTS.md", "AGENTS.md"], [], []);
+test("formatInstallResult rewords the block for update and dry runs", () => {
+  const text = formatInstallResult([".agents"], false, ["AGENTS.md"], [], [], { noun: "Would update", firstInstall: false });
+  assert.match(text, /^Would update:/m);
+  assert.doesNotMatch(text, /Run the discover skill/);
+});
+
+test("formatInstallResult deduplicates instruction files and counts file groups", () => {
+  const text = formatInstallResult([".agents", ".claude"], false, ["AGENTS.md", "AGENTS.md"], ["a/SKILL.md"], ["b/SKILL.md", "c/SKILL.md"], { firstInstall: false });
   assert.equal(text.match(/instruction: AGENTS\.md/g).length, 1);
+  assert.match(text, /Preserved 1 file\(s\)\./);
+  assert.match(text, /Replaced 2 file\(s\)\./);
 });
