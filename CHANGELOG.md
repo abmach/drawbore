@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-11-16
+
+### Fixed
+
+- `init` no longer deletes the content after an unclosed `<!-- drawbore:start -->` marker in an instruction file; the trailing lines are preserved and the block is inserted before them.
+- `update` no longer writes outside the project root when the install marker names an unsupported location; it fails with a message instead of creating sibling directories.
+- `update` respects the skill subset recorded by `init --skills` instead of silently installing the full set.
+- `update` keeps the recorded `notebook` field in the install marker instead of nulling it.
+- `update` prints the ownership-conflict message (with the `--force` hint) instead of a stack trace.
+- `init --dry-run` prints a single `Would install:` header without the first-install hint; the `Installed:` header no longer leaks into dry-run output.
+- `check --json --fix` emits one parseable JSON document with `fixed` and `changed` fields instead of two concatenated objects.
+- `update --check` reports the full drift — missing, foreign, path-conflict, and modified skills — instead of only unowned `SKILL.md` divergence.
+- `init` and `update` validate every destination before the first write, so a conflict in a later location no longer leaves an unrecorded partial install.
+
+### Changed
+
+- `formatInstallResult` lives only in `lib/prompts.js`, parameterized by `noun`/`firstInstall`; the CLI's private, drifted copy is gone.
+- Unused APIs removed: the never-wired spinner (`createSpinner`, `startSpinner`), the `replaceExisting` install option, and the internal `hasSkillMarker` helper.
+- CI: the suite runs on branches, merge requests, and tags on Node 24 and Node 20; the publish job `needs: [test]` and pins `npm@^11.15`.
+- Bare `drawbore` prints the full help; unknown commands print `Unknown command: <cmd>`.
+
 ## [0.2.0] - 2026-11-16
 
 Published to npm as `drawbore@0.2.0` — staged via GitLab CI, maintainer approved with 2FA.
@@ -55,48 +76,6 @@ Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged releas
 ### Changed
 
 - Skill conflicts are decided by content rather than by name. A skill directory is foreign only when its contents diverge from what the package ships; a file/directory mismatch is preserved instead of blocking the install.
-## [0.2.1] - 2026-11-16
-
-### Fixed
-
-- `init` no longer deletes the content after an unclosed `<!-- drawbore:start -->` marker in an instruction file; the trailing lines are preserved and the block is inserted before them.
-- `update` no longer writes outside the project root when the install marker names an unsupported location; it fails with a message instead of creating sibling directories.
-- `update` respects the skill subset recorded by `init --skills` instead of silently installing the full set.
-- `update` keeps the recorded `notebook` field in the install marker instead of nulling it.
-- `update` prints the ownership-conflict message (with the `--force` hint) instead of a stack trace.
-- `init --dry-run` prints a single `Would install:` header without the first-install hint; the `Installed:` header no longer leaks into dry-run output.
-- `check --json --fix` emits one parseable JSON document with `fixed` and `changed` fields instead of two concatenated objects.
-- `update --check` reports the full drift — missing, foreign, path-conflict, and modified skills — instead of only unowned `SKILL.md` divergence.
-- `init` and `update` validate every destination before the first write, so a conflict in a later location no longer leaves an unrecorded partial install.
-
-## [0.2.1] - 2026-11-16
-
-### Fixed
-
-- `init` no longer deletes the content after an unclosed `<!-- drawbore:start -->` marker in an instruction file; the trailing lines are preserved and the block is inserted before them.
-- `update` no longer writes outside the project root when the install marker names an unsupported location; it fails with a message instead of creating sibling directories.
-- `update` respects the skill subset recorded by `init --skills` instead of silently installing the full set.
-- `update` keeps the recorded `notebook` field in the install marker instead of nulling it.
-- `update` prints the ownership-conflict message (with the `--force` hint) instead of a stack trace.
-- `init --dry-run` prints a single `Would install:` header without the first-install hint; the `Installed:` header no longer leaks into dry-run output.
-- `check --json --fix` emits one parseable JSON document with `fixed` and `changed` fields instead of two concatenated objects.
-- `update --check` reports the full drift — missing, foreign, path-conflict, and modified skills — instead of only unowned `SKILL.md` divergence.
-- `init` and `update` validate every destination before the first write, so a conflict in a later location no longer leaves an unrecorded partial install.
-
-### Changed
-
-- `formatInstallResult` lives only in `lib/prompts.js`, parameterized by `noun`/`firstInstall`; the CLI's private, drifted copy is gone.
-- Unused APIs removed: the never-wired spinner (`createSpinner`, `startSpinner`), the `replaceExisting` install option, and the internal `hasSkillMarker` helper.
-- CI: the suite runs on branches, merge requests, and tags on Node 24 and Node 20; the publish job `needs: [test]` and pins `npm@^11.15`.
-- Bare `drawbore` prints the full help; unknown commands print `Unknown command: <cmd>`.
-
-### Changed
-
-- `formatInstallResult` lives only in `lib/prompts.js`, parameterized by `noun`/`firstInstall`; the CLI's private, drifted copy is gone.
-- Unused APIs removed: the never-wired spinner (`createSpinner`, `startSpinner`), the `replaceExisting` install option, and the internal `hasSkillMarker` helper.
-- CI: the suite runs on branches, merge requests, and tags on Node 24 and Node 20; the publish job `needs: [test]` and pins `npm@^11.15`.
-- Bare `drawbore` prints the full help; unknown commands print `Unknown command: <cmd>`.
-
 - `release` branches on `publish mode` and `pipeline`, reading them from `AGENTS.md`. Sections written before those fields existed are still handled: the mode is inferred from the prose and the CI file, and the package field is read as either `package` or `npm package`.
 
 [0.2.1]: https://gitlab.com/abmach/drawbore/-/compare/v0.2.0...v0.2.1
