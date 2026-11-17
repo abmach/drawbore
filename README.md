@@ -18,6 +18,7 @@ The installer, notebook templates, structural checker, and portable skills are i
 - **Portable skills** — `discover`, `recall`, `frame`, `record`, `review`, `init-project`, and `release`.
 - **Structural checks** — duplicate decision IDs, broken supersession, invalid records, missing headings, and stale-candidate warnings.
 - **Consent-aware installation** — no file is overwritten without an explicit choice; locally modified skills are preserved.
+- **Reversible installs** — `uninstall` for a project or a user-level install; skills with local edits are kept and reported rather than deleted.
 - **Provider-neutral operation** — no forge, registry, or CI provider is assumed.
 
 ## Install
@@ -36,7 +37,31 @@ npx drawbore init --location .agents --notebook --instruction AGENTS.md --yes
 
 `.agents`, `.claude`, `.codex`, `.cursor`, `.omp`, `.opencode`
 
-Each location receives its skills under `<location>/skills/`. The instruction file is selected from `AGENTS.md` or `CLAUDE.md`.
+The instruction file is selected from `AGENTS.md` or `CLAUDE.md`.
+
+### User-level installs
+
+Skills can be installed once per machine instead of once per repository. A user-level install writes only into user-level skill directories — no notebook and no instruction file:
+
+```sh
+npx drawbore init --global --location .claude
+npx drawbore update --global
+npx drawbore uninstall --global
+```
+
+Every supported location has a user-level counterpart: `.agents` → `~/.agents/skills`, `.claude` → `~/.claude/skills`, `.codex` → `~/.codex/skills`, `.cursor` → `~/.cursor/skills`, `.opencode` → `~/.config/opencode/skills`, and `.omp` → `~/.omp/agent/skills` (following `OMP_PROFILE` or `PI_CODING_AGENT_DIR` when set). These are the directories Cursor, Claude Code, Codex, OpenCode, and OMP read. The install is recorded in `~/.config/drawbore/install.json` (or `$XDG_CONFIG_HOME/drawbore/install.json`). `--global` requires `--location`.
+
+The two scopes are independent: `drawbore update` and `drawbore uninstall` act on the project unless `--global` is passed. A skill that needs the notebook (`frame`, `recall`, `record`) states that in its description and stops in a project that has none, so a user-level install cannot silently create `.drawbore/` where it was never initialized.
+
+## Uninstall
+
+```sh
+npx drawbore uninstall
+npx drawbore uninstall --dry-run
+npx drawbore uninstall --purge
+```
+
+`uninstall` removes the skills the install owns, the Drawbore block from each recorded instruction file, and the install marker. It never removes a skill it does not own, and a skill with local modifications is kept whole and reported. `.drawbore/` survives unless `--purge` is passed, because the notebook is curated developer content.
 
 ## Check the notebook
 

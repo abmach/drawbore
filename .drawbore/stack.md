@@ -14,7 +14,7 @@
 
 ## Testing
 
-- `node --test` (node:test), 64 tests.
+- `node --test` (node:test), 82 tests.
 
 ## CI
 

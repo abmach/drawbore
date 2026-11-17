@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-11-16
+
+### Changed
+
+- The `frame`, `recall`, and `record` skills state their notebook precondition twice: in the description, which an agent reads while choosing a skill, and in the first line of the body, which it reads once the skill is loaded. All three require `.drawbore/index.md` at the repository root and must not create it, so a skill installed globally stops in a project that never ran `drawbore init` instead of bootstrapping a notebook there.
+- `test/skills.test.js` pins that contract: every skill must ship a single-line description free of `": "` (which would truncate the YAML scalar), the gated three must carry both clauses, and the ungated four must not claim the precondition.
+
+### Added
+
+- `drawbore uninstall` reverses an install in either scope: it removes the skills the install owns, the Drawbore block from each recorded instruction file, and the install marker. `--dry-run` previews, `--purge` also removes the `.drawbore/` notebook and the `.gitignore` note the installer added.
+- `drawbore init --global` and `drawbore update --global` manage a user-level install. Every location has a user-level destination (`~/.agents/skills`, `~/.claude/skills`, `~/.codex/skills`, `~/.cursor/skills`, `~/.omp/agent/skills`, `~/.config/opencode/skills`); the record goes to `~/.config/drawbore/install.json` (XDG-aware), and no notebook or instruction file is written.
+- Uninstall never widens ownership: a skill with no Drawbore marker and no matching recorded hashes is reported and left alone, and a skill with local modifications is kept whole with a removal hint instead of being partially deleted.
+
 ## [0.2.1] - 2026-11-16
 
 ### Fixed
@@ -78,6 +91,7 @@ Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged releas
 - Skill conflicts are decided by content rather than by name. A skill directory is foreign only when its contents diverge from what the package ships; a file/directory mismatch is preserved instead of blocking the install.
 - `release` branches on `publish mode` and `pipeline`, reading them from `AGENTS.md`. Sections written before those fields existed are still handled: the mode is inferred from the prose and the CI file, and the package field is read as either `package` or `npm package`.
 
+[0.3.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.2.1...v0.3.0
 [0.2.1]: https://gitlab.com/abmach/drawbore/-/compare/v0.2.0...v0.2.1
 [0.2.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.1.2...v0.2.0
 [0.1.2]: https://gitlab.com/abmach/drawbore/-/compare/v0.1.1...v0.1.2

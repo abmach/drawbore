@@ -1,10 +1,12 @@
 ---
 name: recall
-description: Use this skill when a project's Drawbore instruction directs you to consult durable context before work or reconcile the implementation with project truth afterward. It reads principles, glossary, decisions, current behavior, technical choices, and active Change Briefs, then surfaces conflicts and offers specific context updates.
+description: Use this skill when a project's Drawbore instruction directs you to consult durable context before work or reconcile the implementation with project truth afterward. It reads principles, glossary, decisions, current behavior, technical choices, and active Change Briefs, then surfaces conflicts and offers specific context updates. Requires a Drawbore notebook (`.drawbore/index.md` at the repository root); check for it first, and if it is absent do not create it — tell the developer to run `npx drawbore init`.
 license: MIT
 ---
 
 # Recall project context
+
+Requires `.drawbore/index.md` at the repository root. If it is absent, stop: this project is not initialized with Drawbore. Do not create the notebook or any record — tell the developer to run `npx drawbore init` and offer to continue afterwards.
 
 Use the current working-tree `.drawbore/` as curated project truth, including tracked records and intentionally local or ignored Change Briefs. Do not duplicate its content in the conversation and do not silently change it.
 

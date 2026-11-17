@@ -1,10 +1,12 @@
 ---
 name: frame
-description: Use this skill when a feature request, bug fix, refactor, or technical change needs brainstorming or a materially clearer scope before implementation. It collaborates with the developer to define purpose, inclusions, non-goals, change points, acceptance conditions, open questions, and consequences, then maintains a transient Change Brief.
+description: Use this skill when a feature request, bug fix, refactor, or technical change needs brainstorming or a materially clearer scope before implementation. It collaborates with the developer to define purpose, inclusions, non-goals, change points, acceptance conditions, open questions, and consequences, then maintains a transient Change Brief. Requires a Drawbore notebook (`.drawbore/index.md` at the repository root); check for it first, and if it is absent do not create it — tell the developer to run `npx drawbore init`.
 license: MIT
 ---
 
 # Frame the change
+
+Requires `.drawbore/index.md` at the repository root. If it is absent, stop: this project is not initialized with Drawbore. Do not create the notebook or any record — tell the developer to run `npx drawbore init` and offer to continue afterwards.
 
 Collaborate with the developer until the intended change is clear enough to implement. This skill shapes scope; it does not orchestrate execution.
 
