@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `drawbore init` no longer reports a harness location as "already installed" because a skills directory exists there. `.claude/skills` and its siblings often hold other tools' skills, and a stale install marker can outlive the directory it described; a location now counts as installed only when this package's own skills are on disk. Affected locations read "skills directory present, Drawbore not installed" instead.
 
+### Changed
+
+- The four skills that gate on a developer decision (`discover`, `recall`, `record`, `review`) now say how to ask: use the harness's structured question tool when one exists — a blocking prompt that cannot be skipped — otherwise plain text, and never treat the model's own restatement of the options as the answer. `frame`, `init-project`, and `release` keep prose, because they have no approval gate. `test/skills.test.js` pins the shared sentence.
+
 ## [0.3.0] - 2026-11-16
 
 ### Changed

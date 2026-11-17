@@ -64,6 +64,8 @@ For every proposed update:
 
 Do not write or delete any record record until the developer explicitly approves the displayed proposal. A request to "remember" a fact starts this workflow but does not approve unseen wording.
 
+Gate on the developer's answer with the harness's structured question tool when one is available — a blocking prompt that cannot be skipped — otherwise ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
+
 ## Follow artifact rules
 
 Read [the artifact formats](references/artifact-formats.md) before writing.

@@ -53,6 +53,8 @@ After implementation:
 6. When the work touched a current-truth artifact or a domain rule, include an explicit `Decisions consulted: <ids and titles, or "none">` line in the reconcile output. A blank or missing line means the decision records were not consulted, which is the consultation failure the resolution step is meant to prevent.
 7. After the developer approves and the updates are applied, run `drawbore check`. If it reports a structural error (duplicate or mismatched decision IDs, broken supersession, invalid status), propose the correction and re-check before reporting the work reconciled.
 
+Gate on the developer's answer with the harness's structured question tool when one is available — a blocking prompt that cannot be skipped — otherwise ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
+
 Do not treat an unreviewed source diff alone as proof that context is stale. Verified behavior, an explicit contract change, or developer confirmation is evidence of a stale current-state record. Treat principles, decisions, terms, and boundaries as governing constraints, and `system.md` and `stack.md` as claims about current state. If records conflict with one another or with verified repository behavior, cite the conflicting sources and do not choose silently. Resolve governing-record conflicts with the developer and propose stale current-state corrections through `record`.
 
 ## Boundaries

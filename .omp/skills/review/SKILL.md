@@ -72,6 +72,8 @@ Enter only on an explicit selection of ids or step numbers.
 
 Before the first edit, restate the selected ids with: files each will touch, the change in one line, the done-condition, and the verification command. Then require an explicit confirmation naming that scope. A single "yes" to the phase-1 question is not this confirmation.
 
+Gate on the developer's answer with the harness's structured question tool when one is available — a blocking prompt that cannot be skipped — otherwise ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
+
 ### 2.2 Baseline first
 
 Run the verification command **before** editing, and record the output. A verification step is worthless if it was already failing, and a red baseline tells you the repo was broken before you arrived — report that rather than attributing it to your change.
