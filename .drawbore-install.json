@@ -1,6 +1,6 @@
 {
-  "version": "0.2.1",
-  "installedAt": "2026-11-17T00:15:25.352Z",
+  "version": "0.3.0",
+  "installedAt": "2026-11-17T01:56:00.190Z",
   "namespace": "drawbore",
   "skills": [
     "discover",
@@ -21,14 +21,17 @@
   "skillHashes": {
     ".omp": {
       "skills/discover/SKILL.md": "574456d9cfa001aaaaf75551068e93552b8dacad475e74c1417a494d39f0647c",
-      "skills/recall/SKILL.md": "cb26fd13d0276bea20f89c0bc3d5254c30454878024061d0a73910726d1aed76",
+      "skills/recall/SKILL.md": "7a27c9c36b81e55217ed98e271a16a99a5be8a90c6bdae3f035997db25020c2f",
       "skills/frame/references/change-brief.md": "a2154127f786365220f62f2f045e644152dc610f4d7453a98cfafce2ffc5a307",
-      "skills/frame/SKILL.md": "bc446201a778ee595660a4a568a475a7d992068c6f651aafe6183a218b5133c1",
+      "skills/frame/SKILL.md": "7639455597966e8d0828417bcf7e2be11e06eae5952b29c6554de8dc08e1e349",
       "skills/record/references/artifact-formats.md": "775b899a104da15d39dcd2725cdbf93a4bc912dcffcc2aeda3352a842bd72e0b",
-      "skills/record/SKILL.md": "e7068635fa3ce5f8d485b169a2f7adcf138e78891dbc9a1918a5587285604013",
+      "skills/record/SKILL.md": "2b89af2e6afca8f4ea37a55fb5c8958fbee520f7059ffd05debf2faee4e7db70",
       "skills/review/SKILL.md": "1dba6120d603d31c1e623d45df82951040fc0ba307fe2da4d242ab994f41d6fd",
       "skills/init-project/SKILL.md": "717bc260d9a66cad336116211535d548dc8579993c4e864eee7673d222d742aa",
       "skills/release/SKILL.md": "7600fefdee1cae8d6e6e2a63c7ac2e7e2ce0cd869e7e8acdaef0c445618268e6"
     }
+  },
+  "skillDirs": {
+    ".omp": "D:\\Personal\\drawbore\\.omp"
   }
 }
