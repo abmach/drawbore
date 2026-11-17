@@ -97,7 +97,9 @@ if (command === "check") {
   const global = plan?.global === true;
   const scope = global ? userScope() : projectScope(await findProjectRoot());
   const root = scope.root;
-  const inspection = global ? await inspectUserScopes() : await inspectProject(root);
+  const inspection = global
+    ? await inspectUserScopes({ packageData, home: scope.root })
+    : await inspectProject(root, packageData);
   const ui = createUi();
 
   // `--global` without `--location` may still be answered by the picker on a

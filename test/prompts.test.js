@@ -27,6 +27,7 @@ test("buildLocationChoices covers six locations and starts with nothing selected
       instructionName: path === ".claude" ? "CLAUDE.md" : "AGENTS.md",
       instructionExists: false,
       skillsExist: false,
+      installed: false,
     })),
   });
 
@@ -38,13 +39,31 @@ test("buildLocationChoices covers six locations and starts with nothing selected
 test("buildLocationChoices never preselects, even when skills already exist", () => {
   const choices = buildLocationChoices({
     locations: [
-      { path: ".agents", instructionName: "AGENTS.md", instructionExists: false, skillsExist: true },
-      { path: ".claude", instructionName: "CLAUDE.md", instructionExists: false, skillsExist: false },
+      { path: ".agents", instructionName: "AGENTS.md", instructionExists: false, skillsExist: true, installed: true },
+      { path: ".claude", instructionName: "CLAUDE.md", instructionExists: false, skillsExist: true, installed: false },
+      { path: ".cursor", instructionName: "AGENTS.md", instructionExists: true, skillsExist: false, installed: false },
     ],
   });
 
   assert.equal(choices[0].checked, false);
   assert.equal(choices[1].checked, false);
+});
+
+test("a foreign skills directory is not reported as an install", () => {
+  // The reported bug: ~/.claude/skills holds other tools' skills, so the old
+  // "skillsExist -> already installed" rule claimed Drawbore was there.
+  const choices = buildLocationChoices({
+    locations: [
+      { path: ".claude", instructionName: "CLAUDE.md", instructionExists: false, skillsExist: true, installed: false },
+      { path: ".agents", instructionName: "AGENTS.md", instructionExists: false, skillsExist: true, installed: true },
+      { path: ".cursor", instructionName: "AGENTS.md", instructionExists: true, skillsExist: false, installed: false },
+    ],
+  });
+
+  assert.match(choices[0].name, /skills directory present, Drawbore not installed/);
+  assert.match(choices[1].name, /already installed/);
+  assert.match(choices[2].name, /instruction already present/);
+  assert.ok(choices.every((choice) => choice.checked === false));
 });
 
 test("buildInstructionChoices defaults every choice to checked", () => {

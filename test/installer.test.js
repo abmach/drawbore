@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { addInstruction, createNotebook, installSkills, loadPackageData } from "../lib/installer.js";
+import { addInstruction, createNotebook, inspectProject, inspectUserScopes, installSkills, loadPackageData } from "../lib/installer.js";
 
 const packageData = await loadPackageData();
 const tempDirs = [];
@@ -96,6 +96,61 @@ test("addInstruction keeps content after an unclosed start marker", async () => 
     assert.match(updated, /<!-- drawbore:end -->/);
     assert.match(updated, /keep this line/);
     assert.match(updated, /more content/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("inspectProject reports a foreign skills directory as not installed", async () => {
+  const root = await makeProject();
+  try {
+    // Another tool's skills live in .claude/skills; that is not a Drawbore
+    // install, and the location picker must not claim it is.
+    await mkdir(path.join(root, ".claude", "skills", "graphify"), { recursive: true });
+    await writeFile(path.join(root, ".claude", "skills", "graphify", "SKILL.md"), "# Graphify\n");
+
+    const before = await inspectProject(root, packageData);
+    const claude = before.locations.find((location) => location.path === ".claude");
+    assert.equal(claude.skillsExist, true);
+    assert.equal(claude.installed, false);
+
+    await installSkills(root, ".claude", packageData);
+
+    const after = await inspectProject(root, packageData);
+    assert.equal(after.locations.find((location) => location.path === ".claude").installed, true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("inspectUserScopes reports a foreign user skills directory as not installed", async () => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "drawbore-home-"));
+  try {
+    await mkdir(path.join(home, ".claude", "skills", "graphify"), { recursive: true });
+    await writeFile(path.join(home, ".claude", "skills", "graphify", "SKILL.md"), "# Graphify\n");
+
+    const scopes = await inspectUserScopes({ home, packageData });
+    const claude = scopes.locations.find((location) => location.path === ".claude");
+
+    assert.equal(claude.skillsExist, true);
+    assert.equal(claude.installed, false);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("a marker that outlived its directory is not an install", async () => {
+  const root = await makeProject();
+  try {
+    await installSkills(root, ".claude", packageData);
+
+    // The marker is still written; the skills are gone.
+    await rm(path.join(root, ".claude"), { recursive: true, force: true });
+
+    const project = await inspectProject(root, packageData);
+    const claude = project.locations.find((location) => location.path === ".claude");
+    assert.equal(claude.skillsExist, false);
+    assert.equal(claude.installed, false);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
