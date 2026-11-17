@@ -155,3 +155,30 @@ test("a marker that outlived its directory is not an install", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("addInstruction matches the destination's line endings", async () => {
+  const root = await makeProject();
+  const target = path.join(root, "AGENTS.md");
+  // The template ships CRLF in a Windows working tree; an LF file must not
+  // end up with a CRLF block spliced into it.
+  const crlfPackage = {
+    ...packageData,
+    instructionTemplate: "<!-- drawbore:start -->\r\nA\r\n<!-- drawbore:end -->",
+  };
+  try {
+    await writeFile(target, "# Rules\n\nUse tabs.\n");
+    await addInstruction(root, "AGENTS.md", crlfPackage);
+    const lfResult = await readFile(target, "utf8");
+    assert.ok(!lfResult.includes("\r"), "a CRLF template must be converted for an LF file");
+    assert.match(lfResult, /Use tabs\./);
+
+    const lfPackage = { ...packageData, instructionTemplate: "<!-- drawbore:start -->\nA\n<!-- drawbore:end -->" };
+    await writeFile(target, "# Rules\r\n\r\nUse tabs.\r\n");
+    await addInstruction(root, "AGENTS.md", lfPackage);
+    const crlfResult = await readFile(target, "utf8");
+    assert.ok(!/[^\r]\n/.test(crlfResult), "an LF template must be converted for a CRLF file");
+    assert.match(crlfResult, /Use tabs\./);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
