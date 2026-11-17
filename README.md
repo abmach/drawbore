@@ -48,6 +48,22 @@ npx drawbore check --fix
 
 `check` is read-only unless `--fix` is passed. `--fix` only aligns decision IDs to filenames and renumbers duplicates; it never rewrites record bodies.
 
+## Refresh an existing install
+
+```sh
+npx drawbore update
+```
+
+`update` re-copies the package's skills into the locations recorded in `.drawbore-install.json` — preserving locally modified files, same rules as `init` — re-applies the Drawbore block to the recorded instruction files, and refreshes the marker. It never creates a notebook and never prompts for locations; it works from the existing install marker.
+
+```sh
+npx drawbore update --dry-run   # print what would change without writing
+npx drawbore update --check     # drift report only; exit 1 if the install differs
+npx drawbore update --force     # replace skills owned by another package
+```
+
+`--check` reports every skill that is missing, foreign, or differs from the package.
+
 ## Skills
 
 | Skill | Role |
@@ -72,53 +88,5 @@ npm test
 ```
 
 ## License
-
-## Refresh an existing install
-
-```sh
-npx drawbore update
-```
-
-`update` re-copies the package's skills into the locations recorded in `.drawbore-install.json` — preserving locally modified files, same rules as `init` — re-applies the Drawbore block to the recorded instruction files, and refreshes the marker. It never creates a notebook and never prompts for locations; it works from the existing install marker.
-
-```sh
-npx drawbore update --dry-run   # print what would change without writing
-npx drawbore update --check     # drift report only; exit 1 if the install differs
-npx drawbore update --force     # replace skills owned by another package
-```
-
-`--check` reports every skill that is missing, foreign, or differs from the package.
-
-## Refresh an existing install
-
-```sh
-npx drawbore update
-```
-
-`update` re-copies the package's skills into the locations recorded in `.drawbore-install.json` — preserving locally modified files, same rules as `init` — re-applies the Drawbore block to the recorded instruction files, and refreshes the marker. It never creates a notebook and never prompts for locations; it works from the existing install marker.
-
-## Refresh an existing install
-
-```sh
-npx drawbore update
-```
-
-`update` re-copies the package's skills into the locations recorded in `.drawbore-install.json` — preserving locally modified files, same rules as `init` — re-applies the Drawbore block to the recorded instruction files, and refreshes the marker. It never creates a notebook and never prompts for locations; it works from the existing install marker.
-
-```sh
-npx drawbore update --dry-run   # print what would change without writing
-npx drawbore update --check     # drift report only; exit 1 if the install differs
-npx drawbore update --force     # replace skills owned by another package
-```
-
-`--check` reports every skill that is missing, foreign, or differs from the package.
-
-```sh
-npx drawbore update --dry-run   # print what would change without writing
-npx drawbore update --check     # drift report only; exit 1 if the install differs
-npx drawbore update --force     # replace skills owned by another package
-```
-
-`--check` reports every skill that is missing, foreign, or differs from the package.
 
 MIT
