@@ -32,7 +32,9 @@ Swallowed exceptions, empty `catch`, `any`/unchecked casts, and a `TODO`/`FIXME`
 
 ### 4. Hygiene and conventions
 
-Tracked build output, secrets, `.env`, key material; ignore-file gaps; CRLF vs `.gitattributes`; inconsistent naming or formatting within one tree; stray debug logging; version stamps that disagree across files (manifest vs changelog vs header comments).
+Tracked build output, secrets, `.env`, key material; ignore-file gaps; line endings; inconsistent naming or formatting within one tree; stray debug logging; version stamps that disagree across files (manifest vs changelog vs header comments).
+
+Audit line endings against the blobs, not the worktree. `git ls-files --eol` prints `i/<index>  w/<worktree>  attr/<attributes>` and then a **tab** before the path, so split on tab — default whitespace splitting shreds `attr/text=auto eol=lf` into two fields and yields a bogus path. `i/crlf` means CR bytes are in the index or commit; no `eol=lf` fixes that on its own and `git diff` never shows it. Confirm each hit with `git cat-file blob :<path> | tr -cd '\r' | wc -c` — a nonzero count is the finding. Report every affected path with its count, and note the repair is a separate normalization commit (`git add --renormalize -- <paths>`), never a history rewrite. A clean `git status` is not evidence: git compares after the clean filter, so a CR-only difference reads as unmodified.
 
 If the repository declares its own conventions (a root `AGENTS.md` or contributor guide, a documented release process, a required file layout), check the repository against them explicitly — that is the highest-yield pass. Compare declarations with reality and report every disagreement as a finding.
 

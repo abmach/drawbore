@@ -20,15 +20,15 @@
   ],
   "skillHashes": {
     ".omp": {
-      "skills/discover/SKILL.md": "a1a83048ab7ed31c29e13b62c846d645d486c3891e3d6240e385726577a89f98",
-      "skills/recall/SKILL.md": "a2d0455e84078966a685a142e00294536d1ff44083b33a1b9895068d551e2eb3",
-      "skills/frame/references/change-brief.md": "a2154127f786365220f62f2f045e644152dc610f4d7453a98cfafce2ffc5a307",
-      "skills/frame/SKILL.md": "51575f30c23f171038d6cf4487b6df608286de5b90bb4ce849f722663733f4af",
-      "skills/record/references/artifact-formats.md": "775b899a104da15d39dcd2725cdbf93a4bc912dcffcc2aeda3352a842bd72e0b",
-      "skills/record/SKILL.md": "a4a906e25033bb3208011f324a22bfd6d877371e4f4f792e1e48b465b14d5dc2",
-      "skills/review/SKILL.md": "0ad1e2cb8a429e9a639c2ffe6129246e9ceb35cdb1aa609e7e43dbebf4239575",
-      "skills/init-project/SKILL.md": "717bc260d9a66cad336116211535d548dc8579993c4e864eee7673d222d742aa",
-      "skills/release/SKILL.md": "7600fefdee1cae8d6e6e2a63c7ac2e7e2ce0cd869e7e8acdaef0c445618268e6"
+      "skills/discover/SKILL.md": "a9f7d311205b15a4851f7e6ef2f1c5bab5eaabe7f48b96784b10eef8fa5a031f",
+      "skills/recall/SKILL.md": "35cf3b203ca0216349b54d0255f7a8f0b444d79557296875b0505c707e25e15f",
+      "skills/frame/references/change-brief.md": "836c950412ba79a5fe0e38999f6c1f0ac8a378d54a2459b4c982c717564c4039",
+      "skills/frame/SKILL.md": "6a356383e742c1ce579f66ea84a8d7e5ebb3e8336e966ccaf7b6a0812f974021",
+      "skills/record/references/artifact-formats.md": "4904ce4ab7d2ae3e6054cbc7c29dbcb7062bfb206b1a311ae1af41ece30556a4",
+      "skills/record/SKILL.md": "35bec38d78db92b1353fb379c29350d9364eb2a9aac65ee469721709d8739ffa",
+      "skills/review/SKILL.md": "c7bfd2fde8c05e24f5ec8da4ff2c9a9d1fd69a602d760c92316aa6d4125365a4",
+      "skills/init-project/SKILL.md": "199b0555b114add80cdba16cff56f9c12fa4adb8e7b7f2613741803789fe468a",
+      "skills/release/SKILL.md": "1cd60940f8324f2b9773c8c3725a3ad16a58c1b92273334cc87ff48552817d55"
     }
   }
 }

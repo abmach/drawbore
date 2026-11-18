@@ -14,7 +14,7 @@ This skill owns the **repository layer only**. It does not assume a forge, a reg
 
 ## Files to generate
 
-- `.gitattributes` — `* text=auto eol=lf`. CRLF from Windows working trees otherwise creeps into published archives and diffs.
+- `.gitattributes` — `* text=auto eol=lf`. CRLF from Windows working trees otherwise creeps into published archives and diffs. It governs what git stores and checks out, not what a tool writes to disk: a client whose commit path skips the clean filter can still store CRLF in a file the worktree holds as CRLF. Say so in the summary rather than implying `eol=lf` covers every writer.
 - `LICENSE` — the license the user chooses, current year, consistent copyright line.
 - `CHANGELOG.md` — dated sections (Keep a Changelog style) with compare links between tags on the canonical forge.
 - `README.md` — title, one-paragraph description, install and use sections, and a build/test badge if the forge provides one. If the repository is mirrored, state which forge is canonical and that issues and releases live there.
