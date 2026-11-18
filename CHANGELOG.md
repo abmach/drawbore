@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-11-18
+
+### Changed
+
+- Every tracked text file is stored as LF, matching what `.gitattributes` has declared since the initial release. 28 files had been committed with CRLF from `ab99f03` onward — the commit path wrote worktree bytes without running git's clean filter, so CR bytes reached the objects while `git diff` still reported no change. The repository, and every published tarball, is now LF end to end.
+- `init-project` states what `.gitattributes` does not cover: it governs what git stores and checks out, not what a tool writes to disk, so `eol=lf` is not a guarantee on its own.
+- `review` audits line endings against the blobs (`git ls-files --eol`) instead of the worktree. A CRLF rewrite of unchanged text is invisible to `git status` and `git diff`, so the previous worktree-level check passed on exactly the repositories it was meant to catch.
+
 ## [0.4.0] - 2026-11-17
 
 ### Removed
@@ -116,6 +124,7 @@ Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged releas
 - Skill conflicts are decided by content rather than by name. A skill directory is foreign only when its contents diverge from what the package ships; a file/directory mismatch is preserved instead of blocking the install.
 - `release` branches on `publish mode` and `pipeline`, reading them from `AGENTS.md`. Sections written before those fields existed are still handled: the mode is inferred from the prose and the CI file, and the package field is read as either `package` or `npm package`.
 
+[0.5.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.4.0...v0.5.0
 [0.4.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.3.1...v0.4.0
 [0.3.1]: https://gitlab.com/abmach/drawbore/-/compare/v0.3.0...v0.3.1
 [0.3.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.2.1...v0.3.0
