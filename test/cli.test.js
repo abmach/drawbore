@@ -21,24 +21,20 @@ function run(root, args) {
   });
 }
 
-test("bare init in a non-TTY installs the defaults without prompting", async () => {
+test("bare init in a non-TTY refuses and installs nothing", async () => {
   const root = await repo();
   try {
     const result = run(root, ["init"]);
-    assert.equal(result.status, 0, result.stderr);
-    await readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md"));
-    await readFile(path.join(root, ".drawbore", "index.md"));
-    const instruction = await readFile(path.join(root, "AGENTS.md"), "utf8");
-    assert.match(instruction, /<!-- drawbore:start -->/);
+    assert.equal(result.status, 2, result.stderr);
+    assert.match(result.stderr, /needs explicit flags/);
+    await assert.rejects(readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md")));
+    await assert.rejects(readFile(path.join(root, ".drawbore", "index.md")));
+    await assert.rejects(readFile(path.join(root, "AGENTS.md")));
+    await assert.rejects(readFile(path.join(root, ".drawbore-install.json")));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
-
-// The former "the CLI imports the interactive prompt builders" test asserted
-// on source text instead of behaviour; the interactive path is covered by
-// prompts.test.js ("TTY ui delegates to the injected prompts module") and the
-// non-TTY defaults test above.
 
 
 test("--version prints the package version", async () => {
@@ -258,13 +254,20 @@ const INDEX = `# Project Notebook
 
 const DECISION = (id) => `---\nid: ${id}\nstatus: accepted\n---\n\n# Decision ${id}\n`;
 
+// `check` walks `decisions/` and `work/` below the directory link, so a fixture
+// that adds records must name them in the index too.
+function indexLinks(...links) {
+  return `${INDEX}${links.map((link) => `- [${link}](${link})\n`).join("")}`;
+}
+
 async function notebookRepo(files) {
   const root = await repo();
   const notebook = path.join(root, ".drawbore");
   await mkdir(path.join(notebook, "decisions"), { recursive: true });
   await mkdir(path.join(notebook, "work"), { recursive: true });
+  const nested = Object.keys(files).filter((name) => name.includes("/")).sort();
   const all = {
-    "index.md": INDEX,
+    "index.md": indexLinks(...nested),
     "context.md": "# Project Context\n",
     "glossary.md": "# Glossary\n",
     "principles.md": "# Principles\n",
@@ -495,6 +498,109 @@ test("init leaves nothing behind when a later location conflicts", async () => {
     assert.doesNotMatch(result.stderr, /SkillConflictError/);
     await assert.rejects(readdir(path.join(root, ".agents", "skills")));
     await assert.rejects(readFile(path.join(root, ".drawbore-install.json")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// The marker is repository-tracked and hand-editable, so `instructions` are a
+// trust boundary the same way `locations` are: an entry outside the project
+// would otherwise become a write target on `update` and a delete target on
+// `uninstall`, outside the tree the developer is working in.
+test("update and uninstall refuse a marker instruction file outside the project", async () => {
+  const outside = await mkdtemp(path.join(os.tmpdir(), "drawbore-outside-"));
+  const root = await repo();
+  try {
+    const victim = path.join(outside, "AGENTS.md");
+    await writeFile(victim, "private notes\n");
+    assert.equal(run(root, ["init", "--location", ".agents", "--notebook", "--yes"]).status, 0);
+
+    const markerPath = path.join(root, ".drawbore-install.json");
+    const marker = JSON.parse(await readFile(markerPath, "utf8"));
+    marker.instructions = [path.relative(root, victim).split(path.sep).join("/")];
+    await writeFile(markerPath, `${JSON.stringify(marker, null, 2)}\n`);
+
+    const update = run(root, ["update"]);
+    assert.equal(update.status, 1);
+    assert.match(update.stderr, /instruction file outside the project/);
+    assert.doesNotMatch(update.stderr, /SkillConflictError/);
+    assert.equal(await readFile(victim, "utf8"), "private notes\n");
+
+    const uninstall = run(root, ["uninstall"]);
+    assert.equal(uninstall.status, 1);
+    assert.match(uninstall.stderr, /instruction file outside the project/);
+    assert.equal(await readFile(victim, "utf8"), "private notes\n");
+    // The refusal precedes removal, so the install is still recorded.
+    await readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md"));
+    await readFile(markerPath);
+  } finally {
+    await rm(outside, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("init reports a file where a skill directory belongs instead of crashing", async () => {
+  const root = await repo();
+  try {
+    await mkdir(path.join(root, ".agents", "skills"), { recursive: true });
+    await writeFile(path.join(root, ".agents", "skills", "recall"), "not a directory\n");
+
+    const result = run(root, ["init", "--yes"]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /a file sits where the skill directory belongs/);
+    // No stack trace, and no partial install: an earlier skill must not have
+    // landed before the conflict was reported.
+    assert.doesNotMatch(result.stderr, /at async|Node\.js v/);
+    await assert.rejects(readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md")));
+    await assert.rejects(readFile(path.join(root, ".drawbore-install.json")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("init reports an unwritable destination without a stack trace", async () => {
+  const root = await repo();
+  try {
+    await mkdir(path.join(root, ".agents"), { recursive: true });
+    await writeFile(path.join(root, ".agents", "skills"), "a file, not a directory\n");
+
+    const result = run(root, ["init", "--yes"]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Cannot install into \.agents\/skills/);
+    assert.doesNotMatch(result.stderr, /    at async|Node\.js v/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// The index links `decisions/` as a directory, so without a nested pass the map
+// stops at that depth: a decision the index never names is one an agent
+// following the index will not read.
+test("check warns about a decision record the index never links", async () => {
+  const root = await notebookRepo({
+    "decisions/0001-first.md": DECISION(1),
+    "decisions/0002-second.md": DECISION(2),
+  });
+  try {
+    const before = run(root, ["check"]);
+    assert.equal(before.status, 0, before.stdout);
+    assert.match(before.stdout, /No structural issues found/);
+
+    // Name one record but not the other: the checker must report the second and
+    // stay silent about the first.
+    const indexPath = path.join(root, ".drawbore", "index.md");
+    await writeFile(
+      indexPath,
+      indexLinks("context.md", "glossary.md", "principles.md", "decisions/", "system.md", "stack.md", "work/", "decisions/0001-first.md"),
+    );
+
+    const result = run(root, ["check"]);
+
+    assert.equal(result.status, 0, result.stdout);
+    assert.match(result.stdout, /decisions\/0002-second\.md is not linked from the index/);
+    assert.doesNotMatch(result.stdout, /decisions\/0001-first\.md/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

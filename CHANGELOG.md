@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-11-19
+
+### Security
+
+- `update` and `uninstall` validate the marker's `instructions` entries against containment inside the project before writing anything. The marker is repository-tracked and hand-editable, and the entry was previously passed straight to the filesystem: `instructions: ["../outside/AGENTS.md"]` made `update` write a block into a file outside the working tree and `uninstall` delete that file outright when the block was its whole content. `locations` were already validated; `instructions` now are too, and a violation is reported with exit 1 before the first write.
+
+### Fixed
+
+- `drawbore init` no longer crashes with an `EEXIST` stack trace when a file sits where a skill directory belongs. The per-skill target type is checked in preflight, so the case is reported as a conflict — and no earlier skill has landed — instead of aborting after a partial install.
+- `drawbore init` with no flags on a non-TTY stream (a pipe, a CI job) now exits 2 and writes nothing, instead of silently installing seven skills, a notebook, and an instruction file that nobody asked for. The interactive confirm is the gate, and a stream nobody reads cannot answer it.
+- `drawbore uninstall` no longer deletes an instruction file the developer already had. The marker now records which instruction files existed before the install (`existedBefore`), and only a file the installer created from nothing is removed with its block; a marker written before that field keeps the file rather than guessing.
+- `drawbore uninstall` removes the `.gitignore` note the installer added, even when the notebook itself survives. The note described an install that no longer exists.
+- `drawbore check` now checks the index map one level deeper: once `decisions/` or `work/` is linked, every record inside it must be linked too. A decision the index never named was invisible to any agent following the index.
+
+### Changed
+
+- `engines` is now `>=22.13.0`. The lockfile pins `@inquirer/prompts` 8.8.0, whose own floor is `^22.22.2 || ^24.15.0 || >=26.0.0`; declaring `>=20` promised a runtime the dependency does not support. CI's `test-node20` job becomes `test-node22` to test the declared floor instead of a line the manifest excludes.
+- `isForeignSkill` and the drift report share one byte comparison (`divergentFiles`). They had drifted apart on the type-mismatch rule: a directory where the package has a file was "preserved" in one and "divergent" in the other. The distinction is now an explicit option rather than two copies of the loop.
+- Expected failures — an unwritable destination, an unsupported marker entry, a skill this install does not own — are one-line messages with exit 1, selected by error type instead of by matching message prefixes.
+- README and `.drawbore/stack.md` state the dependency-resolution split: the lockfile pins 8.8.0 for the repository, while a consumer without one resolves an engine-matched 8.7.5 on Node 20 and 8.8.0 on Node 22+. `.drawbore/context.md` no longer claims a spinner that was removed in 0.2.0.
+
 ## [0.5.1] - 2026-11-19
 
 ### Changed
@@ -136,6 +157,7 @@ Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged releas
 - Skill conflicts are decided by content rather than by name. A skill directory is foreign only when its contents diverge from what the package ships; a file/directory mismatch is preserved instead of blocking the install.
 - `release` branches on `publish mode` and `pipeline`, reading them from `AGENTS.md`. Sections written before those fields existed are still handled: the mode is inferred from the prose and the CI file, and the package field is read as either `package` or `npm package`.
 
+[0.5.2]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.1...v0.5.2
 [0.5.1]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.0...v0.5.1
 [0.5.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.4.0...v0.5.0
 [0.4.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.3.1...v0.4.0

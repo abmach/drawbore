@@ -27,11 +27,24 @@ The installer, notebook templates, structural checker, and portable skills are i
 npx drawbore init
 ```
 
-The installer asks which harness locations should receive the skills, whether to create `.drawbore/`, and which instruction file should carry the Drawbore block. In non-interactive environments, use explicit flags:
+The installer asks which harness locations should receive the skills, whether to create `.drawbore/`, and which instruction file should carry the Drawbore block. When stdin is not a terminal — a pipe, a CI job — it refuses rather than guessing, so pass explicit flags there:
 
 ```sh
 npx drawbore init --location .agents --notebook --instruction AGENTS.md --yes
 ```
+
+### Requirements
+
+Node >= 22.13 (ESM). Drawbore's only runtime dependency is `@inquirer/prompts`, whose own floor is `^22.22.2 || ^24.15.0 || >=26.0.0`.
+
+Which `@inquirer/prompts` you get depends on how you install Drawbore:
+
+| Install | Resolved version | Why |
+|---|---|---|
+| this repository (`npm ci`) | 8.8.0, from `package-lock.json` | the lockfile pins it; `npm ci` reports `EBADENGINE` rather than failing on an older Node |
+| `npm install drawbore` / `npx drawbore` | engine-matched: 8.7.5 on Node 20, 8.8.0 on Node 22+ | npm filters by `engines` when no lockfile pins the version |
+
+The lockfile is not shipped, so a consumer's resolution is engine-aware even where this repository's is not. If you need a reproducible dependency tree, install into a project and commit its lockfile.
 
 ### Supported locations
 

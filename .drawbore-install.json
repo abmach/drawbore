@@ -1,6 +1,6 @@
 {
-  "version": "0.5.1",
-  "installedAt": "2026-11-19T03:39:08.434Z",
+  "version": "0.5.2",
+  "installedAt": "2026-11-19T10:42:25.275Z",
   "namespace": "drawbore",
   "skills": [
     "discover",
@@ -18,6 +18,7 @@
   "instructions": [
     "AGENTS.md"
   ],
+  "existedBefore": [],
   "skillHashes": {
     ".omp": {
       "skills/discover/SKILL.md": "a9f7d311205b15a4851f7e6ef2f1c5bab5eaabe7f48b96784b10eef8fa5a031f",

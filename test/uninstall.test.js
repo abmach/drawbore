@@ -140,3 +140,74 @@ test("uninstall leaves an instruction file with a single marker untouched", asyn
     await rm(root, { recursive: true, force: true });
   }
 });
+
+// An instruction file the installer created from nothing goes with its block; one
+// the developer already had keeps its content. The marker records which is which,
+// because `uninstall` cannot infer it from the file alone.
+test("uninstall removes an instruction file the installer created, keeps a pre-existing one", async () => {
+  const created = await project();
+  try {
+    await installed(created);
+    await readFile(path.join(created, "AGENTS.md"));
+
+    const result = run(created, ["uninstall"]);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /removed instruction block: AGENTS\.md/);
+    await assert.rejects(readFile(path.join(created, "AGENTS.md")));
+  } finally {
+    await rm(created, { recursive: true, force: true });
+  }
+
+  const preExisting = await project();
+  try {
+    await writeFile(path.join(preExisting, "AGENTS.md"), "# House rules\n\nKeep this line.\n");
+    await installed(preExisting);
+
+    const result = run(preExisting, ["uninstall"]);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(await readFile(path.join(preExisting, "AGENTS.md"), "utf8"), "# House rules\n\nKeep this line.\n");
+  } finally {
+    await rm(preExisting, { recursive: true, force: true });
+  }
+});
+
+test("a marker written before existedBefore keeps the instruction file", async () => {
+  const root = await project();
+  try {
+    await writeFile(path.join(root, "AGENTS.md"), "keep me\n");
+    await installed(root);
+
+    // Strip the field to model an install recorded by an older version.
+    const markerPath = path.join(root, ".drawbore-install.json");
+    const marker = JSON.parse(await readFile(markerPath, "utf8"));
+    assert.deepEqual(marker.existedBefore, ["AGENTS.md"]);
+    delete marker.existedBefore;
+    await writeFile(markerPath, `${JSON.stringify(marker, null, 2)}\n`);
+
+    const result = run(root, ["uninstall"]);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(await readFile(path.join(root, "AGENTS.md"), "utf8"), "keep me\n");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("uninstall removes the .gitignore note without purging the notebook", async () => {
+  const root = await project();
+  try {
+    await installed(root);
+
+    const result = run(root, ["uninstall"]);
+
+    assert.equal(result.status, 0, result.stderr);
+    // The notebook survives, but the install it belonged to is gone, so the note
+    // that documents the install must not outlive it.
+    await readFile(path.join(root, ".drawbore", "index.md"));
+    await assert.rejects(readFile(path.join(root, ".gitignore")), { code: "ENOENT" });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

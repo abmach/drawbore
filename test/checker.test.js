@@ -17,6 +17,12 @@ const INDEX = `# Project Notebook
 - [Change Briefs](work/) — transient.
 `;
 
+// `checkIndex` walks `decisions/` and `work/` below the directory link, so a
+// fixture that adds records must name them here too.
+function indexLinks(...links) {
+  return `${INDEX}${links.map((link) => `- [${link}](${link})\n`).join("")}`;
+}
+
 const ARTIFACTS = {
   "context.md": "# Project Context\n",
   "glossary.md": "# Glossary\n",
@@ -32,12 +38,18 @@ function decision({ id, status = "accepted", supersededBy = null, slug = "record
   return lines.join("\n");
 }
 
+// Records the fixture writes under `decisions/` or `work/` are linked from the
+// index by default: the index's nested pass would otherwise report every
+// fixture decision as unlinked, which is the checker working, not the fixture.
 async function notebookWith(files, dirs = ["decisions", "work"]) {
   const root = await mkdtemp(path.join(os.tmpdir(), "drawbore-checker-"));
   const notebook = path.join(root, ".drawbore");
   await mkdir(notebook, { recursive: true });
   for (const dir of dirs) await mkdir(path.join(notebook, dir), { recursive: true });
-  const all = { ...ARTIFACTS, "index.md": INDEX, ...files };
+  const nested = Object.keys(files)
+    .filter((name) => name.includes("/"))
+    .sort();
+  const all = { ...ARTIFACTS, "index.md": indexLinks(...nested), ...files };
   for (const [name, body] of Object.entries(all)) {
     const full = path.join(notebook, name);
     await mkdir(path.dirname(full), { recursive: true });
@@ -241,7 +253,10 @@ test("--fix renumbers duplicate ids without touching bodies", async () => {
     assert.equal(result.changed, true);
     const renamed = await readFile(path.join(notebook, "decisions", "0002-first.md"), "utf8");
     assert.match(renamed, /^id: 0002$/m);
-    assert.deepEqual(codes(await checkNotebook(notebook)), []);
+    // The index still names the pre-fix path; the rename moves the record out
+    // from under that link, so the map must be corrected with it.
+    const findings = await checkNotebook(notebook);
+    assert.deepEqual(codes(findings), ["W003", "W004"]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

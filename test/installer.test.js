@@ -166,3 +166,17 @@ test("addInstruction matches the destination's line endings", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+// `isForeignSkill` and `diffSkills` must keep their different type rules: a
+// directory where the package has a file is a preserved conflict for the copy
+// loop, but a type mismatch `--check` must still report.
+test("a directory where the package has a file is preserved, not foreign", async () => {
+  const root = await makeProject();
+  await mkdir(path.join(root, ".agents", "skills", "discover", "SKILL.md"), { recursive: true });
+
+  const result = await installSkills(root, ".agents", packageData);
+
+  assert.deepEqual(result.conflicts, []);
+  assert.deepEqual(result.preserved, [".agents/skills/discover/SKILL.md"]);
+  assert.equal((await stat(path.join(root, ".agents", "skills", "discover", "SKILL.md"))).isDirectory(), true);
+});

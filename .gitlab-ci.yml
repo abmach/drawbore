@@ -16,8 +16,8 @@
 
 # The suite must run before a tag reaches the publish job, and on every branch
 # and merge request — otherwise the first execution of `npm test` happens
-# inside the release job, after the version bump. Node 20 is tested because
-# `engines` promises `>=20`; the publish job runs the newest LTS.
+# inside the release job, after the version bump. The second job tests the
+# declared `engines` floor; the publish job runs the newest LTS.
 test:
   stage: test
   image: node:24
@@ -29,9 +29,13 @@ test:
     - npm ci
     - npm test
 
-test-node20:
+# The floor moved with `@inquirer/prompts` 8.8.0, which requires
+# `^22.22.2 || ^24.15.0 || >=26.0.0`: a Node 20 job installs it with 85
+# `EBADENGINE` warnings and then tests a runtime `engines` forbids. Keep this
+# job on the oldest line the manifest allows, not on a line it does not.
+test-node22:
   stage: test
-  image: node:20
+  image: node:22
   rules:
     - if: '$CI_COMMIT_BRANCH'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'

@@ -1,6 +1,6 @@
 {
   "name": "drawbore",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "You code. It holds. Durable project context, principles, and portable skills for AI-assisted software development.",
   "type": "module",
   "license": "MIT",
@@ -38,6 +38,6 @@
   },
   "author": "Arthur Biazon Machado",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13.0"
   }
 }

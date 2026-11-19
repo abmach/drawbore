@@ -3,6 +3,8 @@
 import path from "node:path";
 import {
   addInstruction,
+  assertInstructionTarget,
+  assertMarkerInstructions,
   buildInstructionChoices,
   buildLocationChoices,
   checkNotebook,
@@ -12,14 +14,19 @@ import {
   findProjectRoot,
   fixMechanical,
   formatInstallResult,
+  InstallTargetError,
   inspectProject,
   installMarkerFile,
   installSkills,
+  instructionExists,
   isSupportedLocation,
   loadPackageData,
+  MarkerError,
   notebookDirectory,
   preflightInstall,
   readInstallMarker,
+  readMarkerLocations,
+  removeGitignoreNote,
   removeInstallMarker,
   removeInstruction,
   removeNotebook,
@@ -66,21 +73,46 @@ if (args.includes("--version") || args.includes("-v")) {
   process.exit(0);
 }
 
-if (command === "check") {
-  await runCheck(args.slice(1));
-} else if (command === "update") {
-  await runUpdate(args.slice(1), packageData);
-} else if (command === "uninstall") {
-  await runUninstall(args.slice(1), packageData);
-} else if (command === undefined) {
-  // Bare `drawbore` is a help request, not an error worth a one-line usage.
-  printHelp(packageData.version);
-  process.exit(2);
-} else if (command !== "init") {
-  console.error(`Unknown command: ${command}`);
-  console.error("Usage: drawbore init | drawbore update | drawbore check | drawbore uninstall");
-  process.exit(2);
-} else {
+// Every expected failure is a one-line message and exit 1: an unwritable
+// destination (`InstallTargetError`), an unsupported marker entry
+// (`MarkerError`), or a skill it does not own (`SkillConflictError`). A stack
+// trace belongs to a bug, not to a user who pointed the tool at a file where a
+// directory belongs.
+const EXPECTED_ERRORS = [SkillConflictError, MarkerError, InstallTargetError];
+
+async function run(body) {
+  try {
+    await body();
+  } catch (error) {
+    if (EXPECTED_ERRORS.some((Type) => error instanceof Type)) {
+      console.error(error.message);
+      process.exit(1);
+    }
+    throw error;
+  }
+}
+
+await run(async () => {
+  if (command === "check") {
+    await runCheck(args.slice(1));
+  } else if (command === "update") {
+    await runUpdate(args.slice(1), packageData);
+  } else if (command === "uninstall") {
+    await runUninstall(args.slice(1), packageData);
+  } else if (command === undefined) {
+    // Bare `drawbore` is a help request, not an error worth a one-line usage.
+    printHelp(packageData.version);
+    process.exit(2);
+  } else if (command !== "init") {
+    console.error(`Unknown command: ${command}`);
+    console.error("Usage: drawbore init | drawbore update | drawbore check | drawbore uninstall");
+    process.exit(2);
+  } else {
+    await runInit(packageData);
+  }
+});
+
+async function runInit(packageData) {
   let plan;
   try {
     plan = parseExplicitOptions(args.slice(1), packageData);
@@ -93,22 +125,15 @@ if (command === "check") {
   const inspection = await inspectProject(root, packageData);
   const ui = createUi();
 
-  // No flags + non-interactive (pipe, CI, test): use the defaults rather than
-  // prompting on a stream nobody is reading. The prompts layer itself falls
-  // back to readline, which would block forever on a closed stdin.
-  // --dry-run is a flags-mode preview; with no flags the interactive confirm
-  // already serves as the gate, so it is not threaded through the fallback.
+  // No flags + non-interactive (pipe, CI, test): the interactive confirm is
+  // the gate, and a stream nobody reads cannot answer it. Falling back to
+  // defaults instead would install seven skills and a notebook in CI with no
+  // decision behind them, so print the plan and ask for explicit flags.
   if (!plan && !ui.isInteractive) {
-    plan = {
-      locations: [".agents"],
-      notebook: true,
-      instructions: [{ instructionFile: "AGENTS.md" }],
-      force: false,
-      dryRun: false,
-      skills: null,
-    };
+    console.error("Drawbore needs explicit flags when stdin is not a terminal.");
+    console.error("Usage: drawbore init --location <dir> [--notebook] [--instruction <file>] [--skills <list>] [--yes]");
+    process.exit(2);
   }
-
 
   try {
     console.log(`Drawbore ${packageData.version}`);
@@ -161,20 +186,19 @@ if (command === "check") {
       notebookCreated = true;
     }
 
+    // Which instruction files the developer already had, recorded before the
+    // block is spliced in: `uninstall` keeps those, and removes only the files
+    // this run created from nothing.
+    const existedBefore = [];
     const instructionFiles = [];
     for (const target of instructionTargets) {
+      if (await instructionExists(root, target.instructionFile)) existedBefore.push(target.instructionFile);
       await addInstruction(root, target.instructionFile, packageData);
       instructionFiles.push(target.instructionFile);
     }
 
-    await writeInstallMarker(root, selection, selectedLocations, notebookCreated ? notebookDirectory : null, [...new Set(instructionFiles)], skillHashes);
+    await writeInstallMarker(root, selection, selectedLocations, notebookCreated ? notebookDirectory : null, [...new Set(instructionFiles)], skillHashes, existedBefore);
     console.log(formatInstallResult(selectedLocations, notebookCreated, instructionFiles, preservedSkillFiles, replacedSkillFiles));
-  } catch (error) {
-    if (error instanceof SkillConflictError) {
-      console.error(error.message);
-      process.exit(1);
-    }
-    throw error;
   } finally {
     ui.close();
   }
@@ -207,6 +231,12 @@ async function runUpdate(options, packageData) {
     process.exit(1);
   }
 
+  // The marker is repository-tracked and hand-editable, so `locations` are
+  // checked against the documented set and `instructions` against containment
+  // inside the project. Without the second check, `../outside/AGENTS.md` becomes
+  // a write target outside the tree `update` was invoked in.
+  const instructionFiles = await assertMarkerInstructions(root, marker);
+
   // The marker records what the user asked for: `init --skills` installs a
   // subset, and `update` must not widen it behind their back. A marker without
   // a skills list (older install) refreshes the full set.
@@ -234,7 +264,7 @@ async function runUpdate(options, packageData) {
 
   if (dryRun) {
     console.log("Dry run — nothing will be written.");
-    console.log(formatInstallResult(locations, false, (marker.instructions ?? []).map((f) => f), [], [], { noun: "Would update", firstInstall: false }));
+    console.log(formatInstallResult(locations, false, instructionFiles, [], [], { noun: "Would update", firstInstall: false }));
     process.exit(0);
   }
 
@@ -261,17 +291,17 @@ async function runUpdate(options, packageData) {
     throw error;
   }
 
-  const instructionFiles = [];
-  for (const instructionFile of marker.instructions ?? []) {
+  const applied = [];
+  for (const instructionFile of instructionFiles) {
     await addInstruction(root, instructionFile, packageData);
-    instructionFiles.push(instructionFile);
+    applied.push(instructionFile);
   }
 
   // A refresh keeps the recorded notebook: `update` never creates one, and
   // nulling the field would erase the record a previous `init` wrote.
   const notebook = typeof marker.notebook === "string" ? marker.notebook : null;
-  await writeInstallMarker(root, selection, locations, notebook, [...new Set(instructionFiles)], skillHashes);
-  console.log(formatInstallResult(locations, false, instructionFiles, preservedSkillFiles, replacedSkillFiles, { noun: "Updated", firstInstall: false }));
+  await writeInstallMarker(root, selection, locations, notebook, applied, skillHashes, marker.existedBefore);
+  console.log(formatInstallResult(locations, false, applied, preservedSkillFiles, replacedSkillFiles, { noun: "Updated", firstInstall: false }));
 }
 
 
@@ -315,6 +345,10 @@ async function runUninstall(options, packageData) {
     process.exit(1);
   }
 
+  // Validated before any removal: an unvalidated entry would make `uninstall`
+  // delete a file outside the project root, and by then the marker is gone.
+  const instructionFiles = await assertMarkerInstructions(root, marker);
+
   // Removal follows the marker's skill list, not the package's: a subset install
   // must not have skills removed that it never installed.
   const recordedSkills = Array.isArray(marker.skills)
@@ -328,9 +362,17 @@ async function runUninstall(options, packageData) {
 
   const removed = await removeSkills(root, locations, selection, { dryRun });
 
+  // A marker written before this field existed has no record, so the file is
+  // kept rather than guessed at. Deleting developer content on a missing record
+  // is the failure this replaces.
+  const existedBefore = new Set(Array.isArray(marker.existedBefore) ? marker.existedBefore : []);
   const instructions = [];
-  for (const instructionFile of marker.instructions ?? []) {
-    const result = await removeInstruction(root, instructionFile, { dryRun });
+  for (const instructionFile of instructionFiles) {
+    // Only a file this installer created from nothing is removed with its block.
+    const result = await removeInstruction(root, instructionFile, {
+      dryRun,
+      removeEmpty: !existedBefore.has(instructionFile),
+    });
     if (result.status === "removed") instructions.push(instructionFile);
     else if (result.status === "malformed") {
       console.error(`Left ${instructionFile} untouched: it carries only one drawbore marker.`);
@@ -340,6 +382,10 @@ async function runUninstall(options, packageData) {
   }
 
   const notebookRemoved = purge && (dryRun || await removeNotebook(root));
+  // The note documents a notebook that is still there on a plain uninstall, but
+  // the install it belonged to is gone; leaving it behind makes the next reader
+  // think Drawbore is installed. `--purge` removes it with the notebook.
+  if (!dryRun && !notebookRemoved) await removeGitignoreNote(root);
   if (!dryRun) await removeInstallMarker(root);
 
   console.log(formatUninstallResult(removed, {
@@ -499,21 +545,6 @@ function validateSelectedLocations(selected) {
 
 function splitList(value) {
   return value.split(",").map((item) => item.trim()).filter(Boolean);
-}
-
-// The install marker is repository-tracked and hand-editable, so it is a trust
-// boundary: an entry outside the documented locations would otherwise become a
-// write target outside the project root.
-function readMarkerLocations(marker) {
-  const recorded = Array.isArray(marker.locations) ? marker.locations : [];
-  const allowed = Object.keys(supportedLocations);
-  const invalid = recorded.filter((location) => !allowed.includes(location));
-  if (invalid.length > 0) {
-    console.error(`Install marker lists unsupported location(s): ${invalid.join(", ")}`);
-    console.error(`Supported: ${allowed.join(", ")}. Fix the marker or run \`drawbore init\`.`);
-    process.exit(1);
-  }
-  return [...new Set(recorded)];
 }
 
 async function runCheck(options) {

@@ -14,6 +14,6 @@ Durable, curated project context for AI-assisted software development. Drawbore 
 - **`bin/drawbore.js`** — CLI: `init` (interactive or flags), `update` (`--dry-run`, `--check`, `--force`), `check` (`--json`, `--strict`, `--fix`), and `uninstall` (`--dry-run`, `--purge`). One install scope: the project root, recorded in a tracked `.drawbore-install.json`.
 - **`lib/installer.js`** — skill copying, conflict detection by content, notebook creation, instruction-block insertion, install marker.
 - **`lib/checker.js`** — structural linter over `.drawbore/` records.
-- **`lib/prompts.js`** — interactive UI (checkbox prompts, readline fallback, spinner).
+- **`lib/prompts.js`** — interactive UI (checkbox prompts, readline fallback).
 - **`templates/`** — notebook and instruction templates shipped to consumers.
 - **`skills/`** — seven portable skills shipped to consumers.
