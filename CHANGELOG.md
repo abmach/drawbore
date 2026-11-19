@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-11-19
+
+### Changed
+
+- All seven skills now gate on the developer's answer with the same structured-question clause, verbatim. `init-project`, `frame`, and `release` previously asked in prose while the other four mandated the harness's question tool, so the same conversation produced a rendered form in one skill and a wall of text in the next.
+- `init-project` settles its four scaffold questions in one form instead of a run of single questions. `frame` gates scope the same way, and its boundary line now reads execution-approval gates — a scope question was previously forbidden by a clause that also forbade approval gates.
+- `release` states its authorization step separately: restate the exact actions, mark which are local or public, and treat a release as authorizing only the actions named at that moment. Staged approval stays outside the gate as the maintainer's interactive 2FA step.
+
+### Internal
+
+- `skills.test.js` replaces two hand-kept gate lists with a directory walk, so a new skill fails the suite until it carries the clause. Two assertions become one; the suite reports 79.
+
 ## [0.5.0] - 2026-11-18
 
 ### Changed
@@ -124,6 +136,7 @@ Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged releas
 - Skill conflicts are decided by content rather than by name. A skill directory is foreign only when its contents diverge from what the package ships; a file/directory mismatch is preserved instead of blocking the install.
 - `release` branches on `publish mode` and `pipeline`, reading them from `AGENTS.md`. Sections written before those fields existed are still handled: the mode is inferred from the prose and the CI file, and the package field is read as either `package` or `npm package`.
 
+[0.5.1]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.0...v0.5.1
 [0.5.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.4.0...v0.5.0
 [0.4.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.3.1...v0.4.0
 [0.3.1]: https://gitlab.com/abmach/drawbore/-/compare/v0.3.0...v0.3.1
