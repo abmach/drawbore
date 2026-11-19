@@ -112,6 +112,44 @@ test("skills with a batch or per-item decision name the form that collects it", 
   }
 });
 
+
+// The notebook is read by a session that was not in the conversation: that is
+// the boundary Drawbore exists to serve. The rule is stated in the three
+// skills that write artifacts a later reader meets cold — `record` for the
+// notebook, `frame` for the Change Brief, `discover` for the initial record.
+// A skill that says "write clearly" without naming the reader and the
+// dependency it must not carry is satisfiable by prose that still assumes the
+// session, which is the failure the rule exists to prevent.
+const READER_CLAUSE =
+  "for a reader who is capable and has none of the author's implicit knowledge";
+const READER_SKILLS = ["discover", "frame", "record"];
+
+test("skills that write durable context state who the reader is", async () => {
+  for (const skill of READER_SKILLS) {
+    const text = await skillText(skill);
+    assert.ok(
+      text.includes(READER_CLAUSE),
+      `${skill}/SKILL.md does not state the context-free reader its artifacts are written for`,
+    );
+    assert.match(
+      text,
+      /[Aa]s discussed/,
+      `${skill}/SKILL.md must name the session-dependent phrasing its rule forbids`,
+    );
+  }
+});
+
+test("skills that write durable context keep the rule non-degrading", async () => {
+  for (const skill of READER_SKILLS) {
+    const text = await skillText(skill);
+    assert.match(
+      text,
+      /no loss of detail|no loss of precision|rather than simplification|completeness rather than simplification/i,
+      `${skill}/SKILL.md invites simplified or imprecise prose; the reader is capable and the rule must not degrade the artifact`,
+    );
+  }
+});
+
 test("skills that work without a notebook do not claim to require one", async () => {
   for (const skill of UNGATED) {
     const text = await skillText(skill);
@@ -120,4 +158,39 @@ test("skills that work without a notebook do not claim to require one", async ()
       `${skill}/SKILL.md claims the notebook precondition but does not need a notebook`,
     );
   }
+});
+
+// The instruction block lands in AGENTS.md or CLAUDE.md, which every later
+// session reads before it loads a skill. A rule stated only in the skills is
+// absent from the session that never loads one.
+test("the installed instruction block states the same reader bar", async () => {
+  const template = await readFile(path.resolve("templates", "instruction.md"), "utf8");
+  assert.ok(
+    template.includes(READER_CLAUSE),
+    "templates/instruction.md lost the context-free reader clause",
+  );
+  assert.match(
+    template,
+    /[Aa]s discussed/,
+    "templates/instruction.md must name the session-dependent phrasing its rule forbids",
+  );
+});
+
+// `frame`'s brief is the other artifact a later session meets cold; the rule
+// has to reach the section list, not only the skill's prose.
+test("the Change Brief format states the reader bar", async () => {
+  const format = await readFile(
+    path.resolve("skills", "frame", "references", "change-brief.md"),
+    "utf8",
+  );
+  assert.match(
+    format,
+    /none of the session's implicit knowledge/,
+    "skills/frame/references/change-brief.md lost the reader bar",
+  );
+  assert.match(
+    format,
+    /as discussed/,
+    "skills/frame/references/change-brief.md must name the session-dependent phrasing its rule forbids",
+  );
 });

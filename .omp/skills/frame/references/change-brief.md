@@ -48,6 +48,8 @@ Why this change exists and the outcome it should produce.
 - Put only unconfirmed assumptions in `Assumptions`; do not state them as agreed scope. Resolve or remove every assumption before settlement.
 - State acceptance as observable outcomes, not implementation steps.
 - Keep acceptance synchronized with the agreed behavior whenever scope changes.
+- Write for a reader who has none of the session's implicit knowledge: capable, but not present for the conversation. Do not use session-dependent phrasing such as "as discussed" or "same as before"; each statement carries its own grounding. This is completeness, not simplification — keep the detail.
+- State each acceptance condition as input, environment, and observable result, so a reader who did not write the code can check it without asking.
 - Record change points, not tasks.
 - Keep implementation detail in the repository and current task, not in the brief.
 - Record a durable decision here only as a link to its canonical decision record once captured; do not maintain a second copy.

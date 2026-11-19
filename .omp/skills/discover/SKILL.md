@@ -8,6 +8,8 @@ license: MIT
 
 Build an accurate, minimal starting point for the project's durable context. Discovery proposes; the developer confirms.
 
+Write every proposed entry for a reader who is capable and has none of the author's implicit knowledge. This skill shares that bar verbatim with `record` and `frame`: the notebook is read by a session that was not present when the entry was written, and a fact that depends on the current session is unavailable to it. Ground each claim in evidence the entry carries — the file, the command output, the commit, the developer's answer — and do not write "as discussed", "the usual", "same as before", or a pronoun whose referent is not in the entry. Keep the detail and the project's vocabulary with no loss of detail: the reader is capable, so the rule asks for completeness, not simplification.
+
 ## Inspect the project
 
 1. Resolve the project root. Prefer the version-control repository root; otherwise use the current working directory.
@@ -45,11 +47,12 @@ After confirmation:
 
 1. Create missing artifacts for confirmed candidates and apply only the confirmed amendments to existing artifacts.
 2. Use the formats defined by the `record` skill, including its one-owner-per-fact and amendment rules.
-3. Create or update `.drawbore/index.md` only as needed to map the confirmed records accurately.
-4. Do not create empty `work/` or `decisions/` directories unless confirmed content requires them.
-5. Preserve every pre-existing record file and directory unless the developer explicitly approves deleting that exact path.
-6. Treat dependent edits—such as a decision, an affected current-truth artifact, and an index correction—as one atomic proposal: apply all or none.
-7. Report what was created, what was skipped, what was preserved, and any unresolved disagreement.
+3. Before writing, check each entry against the shared bar: every claim grounded, no dependence on the current session, no unresolvable term, no condition stated without its trigger. An entry that fails is revised before it is written, not after.
+4. Create or update `.drawbore/index.md` only as needed to map the confirmed records accurately.
+5. Do not create empty `work/` or `decisions/` directories unless confirmed content requires them.
+6. Preserve every pre-existing record file and directory unless the developer explicitly approves deleting that exact path.
+7. Treat dependent edits—such as a decision, an affected current-truth artifact, and an index correction—as one atomic proposal: apply all or none.
+8. Report what was created, what was skipped, what was preserved, and any unresolved disagreement.
 
 Skipping a candidate means leaving the existing path unchanged, not deleting it. An empty or placeholder file is still an existing path. For example, do not delete `glossary.md` merely because no glossary candidate was confirmed.
 
@@ -72,3 +75,4 @@ If `.drawbore/` already exists:
 - Do not assume an external tracker platform.
 - Do not create empty records merely to complete the taxonomy.
 - Do not delete or rename pre-existing record paths because they are empty, skipped, placeholder-only, or not part of the proposed refresh.
+- Do not leave an entry whose meaning depends on the session that wrote it. "As discussed" is not a record.

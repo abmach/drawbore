@@ -10,6 +10,8 @@ Requires `.drawbore/index.md` at the repository root. If it is absent, stop: thi
 
 Record only knowledge that should influence future work. Keep curated truth compact, evidence-backed, and under the developer's control.
 
+Write every record for a reader who is capable and has none of the author's implicit knowledge. This skill shares that bar verbatim with `discover` and `frame`: the next session reads `.drawbore/` and nothing else, so a fact that depends on the session that wrote it is unavailable to the reader it is meant to serve.
+
 ## Select the artifact
 
 | Knowledge | Destination |
@@ -80,6 +82,18 @@ Read [the artifact formats](references/artifact-formats.md) before writing.
 - Update `.drawbore/index.md` only when its map becomes inaccurate, and include any required index correction in the confirmed proposal.
 - Allocate decision IDs at write time. Immediately before writing, enumerate `.drawbore/decisions/`, find the highest numeric prefix, and allocate the next unused sequential ID with the existing padding width. Never reuse an ID, including IDs of deprecated or superseded records, and never reuse an ID allocated in an earlier turn: a record proposed before a write is not reserved, so re-enumerate and re-allocate at the moment of writing.
 
+## Write for a reader with no session context
+
+Before writing, check the proposed wording against this bar. An entry that fails is revised before it is displayed, not after.
+
+- **Ground every claim in the entry itself.** State the observed behavior, the diff, the command output, the decision, or the developer statement it rests on. A reference points to evidence; it is not the evidence, and it does not replace the fact.
+- **Carry no dependence on the current session.** "As discussed", "the above", "the usual", "same as before", "see earlier", and a pronoun whose referent is not in the entry all assume a reader who was present. Replace each with the fact.
+- **Resolve every term.** Use the glossary's canonical term. A project term the reader cannot resolve from the record is defined where it is introduced; a term local to one entry is defined in that entry.
+- **State conditions completely.** A rule or behavior carries its trigger, its behavior, the failure path, and the input or environment that makes it apply. "Works" and "handles errors" are not conditions.
+- **Stay precise, not simplified.** The reader is capable. Plain technical prose, the project's vocabulary, and no loss of detail: this is not a request to restate a rule in simpler words or to drop a term because it is unfamiliar.
+
+The same bar applies to `stack.md`, `system.md`, and `context.md`, which describe current state rather than a decision, and to the `Outcome` section of a settled Change Brief, which a later reader meets without the implementation session.
+
 ## Reconcile a settled Change Brief
 
 Only the developer may mark a brief settled, and only after the implementation is complete and its acceptance conditions have been verified.
@@ -101,3 +115,4 @@ Do not create a settled-work archive.
 - Do not invent rationale the developer did not provide; mark an inference as an inference.
 - Do not add generic preferences or universal engineering advice as project truth.
 - Do not create a second source of truth for external issue state.
+- Do not degrade a record to make it readable. The reader is capable; the rule is about completeness and grounding, not about simpler words, shorter sentences, or dropped terms.

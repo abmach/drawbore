@@ -10,6 +10,8 @@ Requires `.drawbore/index.md` at the repository root. If it is absent, stop: thi
 
 Collaborate with the developer until the intended change is clear enough to implement. This skill shapes scope; it does not orchestrate execution.
 
+Write every artifact this skill produces for a reader who is capable and has none of the author's implicit knowledge. This skill shares that bar verbatim with `record` and `discover`: the Change Brief is read by a session that was not in the conversation, and a scope that depends on the conversation is not a scope. State the purpose with the problem it solves, each inclusion with its behavior, each non-goal with the reason it is excluded when it could read as an oversight, and each acceptance condition with the observable result that proves it. Ground each statement in the developer's answer, the repository, or the diff; do not write "as discussed", "the usual", or "same as before". Keep the detail and the project's vocabulary with no loss of detail; the rule asks for completeness, not simplification.
+
 ## Choose whether scope work is needed
 
 Use scope work when at least one material uncertainty remains:
@@ -63,6 +65,8 @@ A **change point** is a place where the implementation can affect established pr
 
 For each change point, identify the affected area and the expected consequence. Do not prescribe implementation steps or milestones.
 
+Before the brief is treated as current, check each section against that bar. `Purpose` names the problem and the outcome, not the mechanism. `Scope` states behavior a reader can act on without the conversation, and `Non-goals` carries the reason for any exclusion that would otherwise look like an oversight. `Acceptance` states the observable condition — input, environment, and result — so a reader who did not write the code can check it. A brief that only restates the diff fails this: acceptance that cannot be checked by that reader is a restatement of intent, not a condition.
+
 ## Settle the work
 
 "Scope agreed" ends clarification but does not settle the work. Settle only after the implementation is complete and every acceptance condition has been checked against the implemented behavior and passes.
@@ -87,3 +91,4 @@ For each change point, identify the affected area and the expected consequence. 
 - Do not write code while clarifying scope.
 - Do not turn implementation preferences into project-wide principles.
 - Do not assume where external issues are tracked.
+- Do not turn the Change Brief into a summary of the conversation. A later session reads the brief, not the transcript; a statement that needs the transcript to be understood is not scope.

@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-11-19
+
+### Added
+
+- Durable records and Change Briefs are now written for **a reader who is capable and has none of the author's implicit knowledge** — the next session, which reads `.drawbore/` and nothing else. The Smart Kid Principle from Chapter 4 of *Spec-Driven Development* (Felipe Fontoura), applied at record level rather than spec level, with the "kid" framing dropped: the rule is completeness, not simplification. `record` gains a section naming the checks (every claim grounded in the entry, no "as discussed" / "same as before" / unresolvable pronoun, glossary terms resolved, conditions stated with trigger and failure path) and a boundary against degrading a record to make it readable. `frame` applies the same bar to `Purpose`, `Scope`, `Non-goals`, and `Acceptance`, and its Change Brief format states it and requires acceptance as input, environment, and observable result. `discover` checks initial entries against the same bar before writing. The installed instruction block carries it too, so a session that never loads a skill still reads it in `AGENTS.md` or `CLAUDE.md`. `review` and `init-project` are unchanged: their artifacts address the developer in the current session.
+- Principle 7, *Context is written for a reader with no session*, and decision `0005`, which records the choice, its alternatives, and the reason `review` and `init-project` are excluded.
+- `test/skills.test.js` pins the reader sentence in `record`, `frame`, and `discover`, the non-degradation clause that keeps the rule from decaying into "explain it like I'm five", the instruction block, and the Change Brief format.
+
+### Fixed
+
+- `package-lock.json`'s root `engines.node` was `>=20` while `package.json` has required `>=22.13.0` since 0.5.2: the previous version bumps edited the lockfile's two `version` fields by hand and left the stale `engines` behind. Regenerating it with `npm install --package-lock-only` brings the two manifests back into agreement. No dependency versions changed.
+
 ## [0.5.3] - 2026-11-19
 
 ### Changed
@@ -165,6 +177,7 @@ Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged releas
 - Skill conflicts are decided by content rather than by name. A skill directory is foreign only when its contents diverge from what the package ships; a file/directory mismatch is preserved instead of blocking the install.
 - `release` branches on `publish mode` and `pipeline`, reading them from `AGENTS.md`. Sections written before those fields existed are still handled: the mode is inferred from the prose and the CI file, and the package field is read as either `package` or `npm package`.
 
+[0.6.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.3...v0.6.0
 [0.5.3]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.2...v0.5.3
 [0.5.2]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.1...v0.5.2
 [0.5.1]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.0...v0.5.1
