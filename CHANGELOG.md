@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-11-19
+
+### Changed
+
+- All seven skills now say *when* the rendered form is mandatory, not only *how* to ask. The shared clause already required the harness's question tool, but "offer apply/edit/skip" read as satisfiable in prose — a review proposed eleven findings in a table and asked its question in a sentence, and the developer answered by typing ids. The trigger is verbatim across the set: a turn that ends by asking the developer to choose ends in a rendered form.
+- `discover`, `record`, `recall`, and `review` name the form that collects their decision instead of only listing the options: `discover` gets one checkbox group per artifact with the candidate and evidence inline; `record` and `recall` get apply/edit/skip with a free-text field for the wording `edit` asks for; `review` phase 1 selects ids by checkbox grouped by severity, and phase 2.1 restates scope with one checkbox per id so a single item can be vetoed. `frame` and `init-project` say "rendered form" rather than "one form".
+- `test/skills.test.js` pins the trigger in every skill and asserts the four decision-carrying skills name the form and keep a free-text path, so a new skill fails the suite until it does.
+
 ## [0.5.2] - 2026-11-19
 
 ### Security
@@ -25,9 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `isForeignSkill` and the drift report share one byte comparison (`divergentFiles`). They had drifted apart on the type-mismatch rule: a directory where the package has a file was "preserved" in one and "divergent" in the other. The distinction is now an explicit option rather than two copies of the loop.
 - Expected failures — an unwritable destination, an unsupported marker entry, a skill this install does not own — are one-line messages with exit 1, selected by error type instead of by matching message prefixes.
 - README and `.drawbore/stack.md` state the dependency-resolution split: the lockfile pins 8.8.0 for the repository, while a consumer without one resolves an engine-matched 8.7.5 on Node 20 and 8.8.0 on Node 22+. `.drawbore/context.md` no longer claims a spinner that was removed in 0.2.0.
-- All seven skills now say *when* the rendered form is mandatory, not only *how* to ask. The shared clause already required the harness's question tool, but "offer apply/edit/skip" read as satisfiable in prose — a review proposed eleven findings in a table and asked its question in a sentence. The new trigger is verbatim across the set: a turn that ends by asking the developer to choose ends in a rendered form.
-- `discover`, `record`, `recall`, and `review` name the form that collects their decision instead of only listing the options: `discover` gets one checkbox group per artifact with the candidate and evidence inline; `record` and `recall` get apply/edit/skip with a free-text field for the wording `edit` asks for; `review` phase 1 selects ids by checkbox grouped by severity, and phase 2.1 restates scope with one checkbox per id so a single item can be vetoed. `frame` and `init-project` say "rendered form" rather than "one form".
-- `test/skills.test.js` pins the trigger in every skill and asserts the four decision-carrying skills name the form and keep a free-text path, so a new skill fails the suite until it does.
 
 ## [0.5.1] - 2026-11-19
 
@@ -160,6 +165,7 @@ Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged releas
 - Skill conflicts are decided by content rather than by name. A skill directory is foreign only when its contents diverge from what the package ships; a file/directory mismatch is preserved instead of blocking the install.
 - `release` branches on `publish mode` and `pipeline`, reading them from `AGENTS.md`. Sections written before those fields existed are still handled: the mode is inferred from the prose and the CI file, and the package field is read as either `package` or `npm package`.
 
+[0.5.3]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.2...v0.5.3
 [0.5.2]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.1...v0.5.2
 [0.5.1]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.0...v0.5.1
 [0.5.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.4.0...v0.5.0
