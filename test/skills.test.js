@@ -76,14 +76,17 @@ test("skills that read or write the notebook state the gate twice", async () => 
   }
 });
 
-// The approval gates name a mechanism now: ask with the harness's structured
-// question tool when one exists, and never treat the model's own restatement as
-// the answer. Every skill that asks the developer to decide something carries
-// the clause, so the asking mechanism is uniform across the set. `frame` and
-// `release` gate on scope and on release authorization respectively; neither
-// claims an execution-approval gate.
-const ASK_CLAUSE =
-  "Gate on the developer's answer with the harness's structured question tool when one is available — a blocking prompt that cannot be skipped — otherwise ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.";
+// The approval gates name a mechanism and a trigger: a choice turn ends in a
+// rendered form when one exists, and never on the model's own restatement.
+// The trigger says *when* the form is mandatory, not only *how* to ask. An
+// agent reading only "offer apply/edit/skip" could satisfy the old clause with
+// prose and still be compliant, which is what happened: a review proposed
+// eleven findings in a table and asked its question in a sentence, and the
+// developer answered by typing ids. `frame` and `release` gate on scope and on
+// release authorization respectively; neither claims an execution-approval gate.
+const CHOICE_TURN_CLAUSE =
+  "A turn that ends by asking the developer to choose ends in a rendered form, not in prose";
+
 
 // Every skill asks the developer to decide something — scope, a proposal, a
 // release authorization — so the asking mechanism is uniform across the set.
@@ -92,7 +95,20 @@ const ASK_CLAUSE =
 test("every skill that asks the developer to decide says how", async () => {
   for (const skill of await skills()) {
     const text = await skillText(skill);
-    assert.ok(text.includes(ASK_CLAUSE), `${skill}/SKILL.md lost the structured-question clause`);
+    assert.ok(text.includes(CHOICE_TURN_CLAUSE), `${skill}/SKILL.md lost the choice-turn trigger`);
+  }
+});
+
+// A skill that names a decision list but not its rendering invites prose. These
+// four carry batch or per-item choices; a prose question there is the failure
+// the trigger exists to prevent.
+const FORM_SKILLS = ["discover", "record", "recall", "review"];
+
+test("skills with a batch or per-item decision name the form that collects it", async () => {
+  for (const skill of FORM_SKILLS) {
+    const text = await skillText(skill);
+    assert.match(text, /rendered form/, `${skill}/SKILL.md offers a decision list without naming the form that collects it`);
+    assert.match(text, /free-text field|free-text path/, `${skill}/SKILL.md must keep a free-text path for answers the options do not cover`);
   }
 });
 

@@ -33,16 +33,11 @@ Do not seed generic technology preferences, testing doctrine, or design doctrine
 
 Before proposing, read `.drawbore/index.md` and every existing record that could cover a candidate. Search by project concept, not only by the proposed filename, and identify the exact existing entry to amend or state that no equivalent entry exists. Do not propose a duplicate when an existing record owns the fact.
 
-Present candidates with evidence and a concrete destination. Use these options:
-
-- **apply as proposed**;
-- **edit** the developer's wording;
-- **skip**;
-- **skip the remaining candidates** for that artifact.
+Present candidates with evidence and a concrete destination, then collect the batch in a rendered form: one checkbox group per artifact offering **apply as proposed**, **edit the developer's wording**, **skip**, or **skip the remaining candidates** for that artifact; the candidate text and its evidence inline in the form; and a free-text field for the wording **edit** asks for. A batch of six artifacts cannot be settled in prose — a prose list invites one blanket answer that the writer then over-applies.
 
 Then wait for the developer's response. **Apply as proposed** approves exactly the displayed proposal; **edit** requires revised wording to be displayed and approved; **skip** changes nothing. Prefer the developer's exact wording. Mark inferred rationale as inferred. Never write, overwrite, amend, or delete an unconfirmed candidate.
 
-Gate on the developer's answer with the harness's structured question tool when one is available — a blocking prompt that cannot be skipped — otherwise ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
+A turn that ends by asking the developer to choose ends in a rendered form, not in prose: the question tool is a blocking prompt that cannot be skipped, prose can be scrolled past and answered by momentum. When no form tool exists, ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
 
 ## Create the record
 

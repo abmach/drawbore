@@ -28,7 +28,7 @@ Never assume a forge or registry: use the remotes, CI configuration, and `## Rel
 
 Gate the release on the developer's explicit authorization, not on the momentum of the flow. Before committing, pushing, or tagging, restate the exact actions and put them to the developer in one form the harness can render — command, effect, and whether it is local or public. Nothing in that list runs on an implicit yes: a release authorizes only the actions named at that moment, so a later step needs its own consent.
 
-Gate on the developer's answer with the harness's structured question tool when one is available — a blocking prompt that cannot be skipped — otherwise ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
+A turn that ends by asking the developer to choose ends in a rendered form, not in prose: the question tool is a blocking prompt that cannot be skipped, prose can be scrolled past and answered by momentum. When no form tool exists, ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
 
 Approval of a **staged** publish is never automated and never bundled into this gate: it is the maintainer's interactive proof-of-presence step with 2FA, and only the maintainer can perform it.
 

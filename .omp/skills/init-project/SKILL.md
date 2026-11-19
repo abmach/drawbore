@@ -12,7 +12,7 @@ This skill owns the **repository layer only**. It does not assume a forge, a reg
 3. **Does it publish a package?** If yes, settle the package name now: verify availability with the registry's lookup command (`npm view <name> version`, `cargo search <name>`, `pip index versions <name>`, or the ecosystem equivalent). Remember that many registries never recycle names — a bare name may be a dead package forever. Follow the ecosystem's naming conventions.
 4. **Primary language and package manager**, so ignore rules and manifests match reality.
 
-Gate on the developer's answer with the harness's structured question tool when one is available — a blocking prompt that cannot be skipped — otherwise ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover. Settle all four questions in one form when they are independent; a scaffolding pass that guesses a repository path or a package name is a pass that writes the wrong files.
+A turn that ends by asking the developer to choose ends in a rendered form, not in prose: the question tool is a blocking prompt that cannot be skipped, prose can be scrolled past and answered by momentum. Settle all four questions in that one form when they are independent — a scaffolding pass that guesses a repository path or a package name is a pass that writes the wrong files. When no form tool exists, ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
 
 ## Files to generate
 

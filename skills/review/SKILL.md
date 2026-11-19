@@ -60,11 +60,7 @@ Lead with a 3–5 line verdict: what the repo is, its strongest and weakest aspe
 4. **Proposed order of work** — 3–5 numbered steps referencing those ids, highest ratio first, each with a verifiable done-condition.
 5. **Unverified** — `[INFERENCE]` items and what check would settle each.
 
-End with exactly one question:
-
-> Which items should I implement? Reply with ids or step numbers (e.g. `F1, F4` or `do step 2`). Anything not named stays untouched.
-
-Then stop. Do not start implementing from a vague "yes" or "go ahead" — that authorizes nothing specific.
+End with one rendered form, not a prose question — the ids are the choice, and a form is what makes it one. One checkbox per finding, grouped by severity, pre-checked with the ids the proposed order names, each label carrying its effort and confidence; a free-text field for ids the groups cannot express; and the ranked table above as context so the cost of each choice is visible without scrolling. Then stop. Do not start implementing from a vague "yes" or "go ahead" — that authorizes nothing specific.
 
 ## Phase 2 — approval-gated implementation
 
@@ -72,9 +68,9 @@ Enter only on an explicit selection of ids or step numbers.
 
 ### 2.1 Confirm the scope, in writing
 
-Before the first edit, restate the selected ids with: files each will touch, the change in one line, the done-condition, and the verification command. Then require an explicit confirmation naming that scope. A single "yes" to the phase-1 question is not this confirmation.
+Before the first edit, restate the selected ids with: files each will touch, the change in one line, the done-condition, and the verification command. Then require an explicit confirmation naming that scope, in a rendered form with one checkbox per selected id so the developer can veto a single item rather than the whole batch. A single "yes" to the phase-1 question is not this confirmation.
 
-Gate on the developer's answer with the harness's structured question tool when one is available — a blocking prompt that cannot be skipped — otherwise ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
+A turn that ends by asking the developer to choose ends in a rendered form, not in prose: the question tool is a blocking prompt that cannot be skipped, prose can be scrolled past and answered by momentum. When no form tool exists, ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
 
 ### 2.2 Baseline first
 

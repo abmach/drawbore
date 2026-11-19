@@ -32,7 +32,7 @@ Do not use scope work for a straightforward, well-bounded change whose answers a
 5. Probe meaningful alternatives and edge cases only where they could change the implementation.
 6. Separate confirmed facts from assumptions and open questions.
 
-Gate on the developer's answer with the harness's structured question tool when one is available — a blocking prompt that cannot be skipped — otherwise ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover. Put the scope questions in one form rather than a run of single questions; a scope that arrives in pieces gets settled piecemeal and the later answers are never reconciled.
+A turn that ends by asking the developer to choose ends in a rendered form, not in prose: the question tool is a blocking prompt that cannot be skipped, prose can be scrolled past and answered by momentum. Put the scope questions in that one form rather than a run of single questions — a scope that arrives in pieces gets settled piecemeal and the later answers are never reconciled. When no form tool exists, ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
 
 ## Maintain a Change Brief
 
