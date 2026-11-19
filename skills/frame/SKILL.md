@@ -32,6 +32,8 @@ Do not use scope work for a straightforward, well-bounded change whose answers a
 5. Probe meaningful alternatives and edge cases only where they could change the implementation.
 6. Separate confirmed facts from assumptions and open questions.
 
+Gate on the developer's answer with the harness's structured question tool when one is available — a blocking prompt that cannot be skipped — otherwise ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover. Put the scope questions in one form rather than a run of single questions; a scope that arrives in pieces gets settled piecemeal and the later answers are never reconciled.
+
 ## Maintain a Change Brief
 
 Store a Change Brief in `.drawbore/work/` while the work is being shaped or implemented. Use a descriptive kebab-case filename, for example `add-user-imports.md`.
@@ -81,7 +83,7 @@ For each change point, identify the affected area and the expected consequence. 
 
 ## Boundaries
 
-- Do not create milestones, dependencies, task assignments, retries, or approval gates.
+- Do not create milestones, task assignments, retries, or execution-approval gates. A question that settles scope is not an approval gate, and neither is the consent the change brief itself requires before removal or commit.
 - Do not write code while clarifying scope.
 - Do not turn implementation preferences into project-wide principles.
 - Do not assume where external issues are tracked.

@@ -78,24 +78,21 @@ test("skills that read or write the notebook state the gate twice", async () => 
 
 // The approval gates name a mechanism now: ask with the harness's structured
 // question tool when one exists, and never treat the model's own restatement as
-// the answer. Four skills gate on a developer decision; the rest do not.
+// the answer. Every skill that asks the developer to decide something carries
+// the clause, so the asking mechanism is uniform across the set. `frame` and
+// `release` gate on scope and on release authorization respectively; neither
+// claims an execution-approval gate.
 const ASK_CLAUSE =
   "Gate on the developer's answer with the harness's structured question tool when one is available — a blocking prompt that cannot be skipped — otherwise ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.";
 
-const GATED_ON_ANSWER = ["discover", "recall", "record", "review"];
-const NOT_GATED_ON_ANSWER = ["frame", "init-project", "release"];
-
-test("skills that gate on a decision say how to ask for it", async () => {
-  for (const skill of GATED_ON_ANSWER) {
+// Every skill asks the developer to decide something — scope, a proposal, a
+// release authorization — so the asking mechanism is uniform across the set.
+// Iterating the directory rather than a hand-kept list makes a new skill fail
+// here until it carries the clause.
+test("every skill that asks the developer to decide says how", async () => {
+  for (const skill of await skills()) {
     const text = await skillText(skill);
     assert.ok(text.includes(ASK_CLAUSE), `${skill}/SKILL.md lost the structured-question clause`);
-  }
-});
-
-test("skills without an approval gate do not claim one", async () => {
-  for (const skill of NOT_GATED_ON_ANSWER) {
-    const text = await skillText(skill);
-    assert.ok(!text.includes(ASK_CLAUSE), `${skill}/SKILL.md claims an approval gate it does not have`);
   }
 });
 
