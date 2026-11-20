@@ -195,6 +195,54 @@ test("a marker written before existedBefore keeps the instruction file", async (
   }
 });
 
+test("sequential inits keep every installed location reversible", async () => {
+  const root = await project();
+  try {
+    assert.equal(run(root, ["init", "--location", ".agents", "--no-notebook", "--yes"]).status, 0);
+    assert.equal(run(root, ["init", "--location", ".cursor", "--no-notebook", "--yes"]).status, 0);
+
+    const marker = JSON.parse(await readFile(path.join(root, ".drawbore-install.json"), "utf8"));
+    assert.deepEqual(marker.locations, [".agents", ".cursor"]);
+
+    const result = run(root, ["uninstall"]);
+    assert.equal(result.status, 0, result.stderr);
+    await assert.rejects(readdir(path.join(root, ".agents", "skills")));
+    await assert.rejects(readdir(path.join(root, ".cursor", "skills")));
+    await assert.rejects(readFile(path.join(root, ".drawbore-install.json")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("different skill subsets per location survive update and uninstall", async () => {
+  const root = await project();
+  try {
+    assert.equal(run(root, ["init", "--location", ".agents", "--no-notebook", "--no-instruction", "--skills", "discover", "--yes"]).status, 0);
+    assert.equal(run(root, ["init", "--location", ".cursor", "--no-notebook", "--no-instruction", "--skills", "record", "--yes"]).status, 0);
+
+    const markerPath = path.join(root, ".drawbore-install.json");
+    let marker = JSON.parse(await readFile(markerPath, "utf8"));
+    assert.deepEqual(marker.skillsByLocation[".agents"], ["discover"]);
+    assert.deepEqual(marker.skillsByLocation[".cursor"], ["record"]);
+
+    const update = run(root, ["update"]);
+    assert.equal(update.status, 0, update.stderr);
+
+    marker = JSON.parse(await readFile(markerPath, "utf8"));
+    assert.deepEqual(marker.skillsByLocation[".agents"], ["discover"]);
+    assert.deepEqual(marker.skillsByLocation[".cursor"], ["record"]);
+    assert.deepEqual((await readdir(path.join(root, ".agents", "skills"))), ["discover"]);
+    assert.deepEqual((await readdir(path.join(root, ".cursor", "skills"))), ["record"]);
+
+    const uninstall = run(root, ["uninstall"]);
+    assert.equal(uninstall.status, 0, uninstall.stderr);
+    await assert.rejects(readdir(path.join(root, ".agents", "skills")));
+    await assert.rejects(readdir(path.join(root, ".cursor", "skills")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("uninstall removes the .gitignore note without purging the notebook", async () => {
   const root = await project();
   try {

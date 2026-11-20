@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -252,7 +252,7 @@ const INDEX = `# Project Notebook
 - [Change Briefs](work/) — transient.
 `;
 
-const DECISION = (id) => `---\nid: ${id}\nstatus: accepted\n---\n\n# Decision ${id}\n`;
+const DECISION = (id) => `---\nid: ${id}\nstatus: accepted\nsignificance: durable\ndate: 2026-11-19\n---\n\n# Decision ${id}\n\n## Context\n\nWhy the decision was needed.\n\n## Decision\n\nWhat was chosen.\n\n## Rationale\n\nWhy it was chosen.\n\n## Alternatives considered\n\n- Alternative — why it was not chosen.\n\n## Consequences\n\n- Consequence.\n`;
 
 // `check` walks `decisions/` and `work/` below the directory link, so a fixture
 // that adds records must name them in the index too.
@@ -317,7 +317,7 @@ test("check --json reports a duplicate decision id as an error", async () => {
 
 test("check --fix aligns the id and then reports clean", async () => {
   const root = await notebookRepo({
-    "decisions/0007-record.md": `---\nid: 6\nstatus: accepted\n---\n\n# Record\n`,
+    "decisions/0007-record.md": `---\nid: 6\nstatus: accepted\nsignificance: durable\ndate: 2026-11-19\n---\n\n# Record\n\n## Context\n\nWhy the decision was needed.\n\n## Decision\n\nWhat was chosen.\n\n## Rationale\n\nWhy it was chosen.\n\n## Alternatives considered\n\n- Alternative — why it was not chosen.\n\n## Consequences\n\n- Consequence.\n`,
   });
   try {
     const result = run(root, ["check", "--fix"]);
@@ -370,6 +370,126 @@ test("check rejects unknown options with exit 2", async () => {
     const result = run(root, ["check", "--jsn"]);
     assert.equal(result.status, 2);
     assert.match(result.stderr, /Unknown option for check: --jsn/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update and uninstall refuse a marker instruction symlinked outside the project", async () => {
+  const outside = await mkdtemp(path.join(os.tmpdir(), "drawbore-symlink-"));
+  const root = await repo();
+  try {
+    const victim = path.join(outside, "AGENTS.md");
+    await writeFile(victim, "private notes\n");
+    assert.equal(run(root, ["init", "--location", ".agents", "--no-notebook", "--yes"]).status, 0);
+
+    const markerPath = path.join(root, ".drawbore-install.json");
+    const marker = JSON.parse(await readFile(markerPath, "utf8"));
+    marker.instructions = ["linked/AGENTS.md"];
+    await writeFile(markerPath, `${JSON.stringify(marker, null, 2)}\n`);
+    await mkdir(path.join(root, "linked"));
+    await symlink(victim, path.join(root, "linked", "AGENTS.md"), "file");
+
+    const update = run(root, ["update"]);
+    assert.equal(update.status, 1);
+    assert.match(update.stderr, /outside the project/);
+    assert.equal(await readFile(victim, "utf8"), "private notes\n");
+
+    const uninstall = run(root, ["uninstall"]);
+    assert.equal(uninstall.status, 1);
+    assert.match(uninstall.stderr, /outside the project/);
+    assert.equal(await readFile(victim, "utf8"), "private notes\n");
+  } finally {
+    await rm(outside, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update and uninstall refuse a marker instruction under a symlinked ancestor", async () => {
+  const outside = await mkdtemp(path.join(os.tmpdir(), "drawbore-symlink-dir-"));
+  const root = await repo();
+  try {
+    await mkdir(path.join(outside, "nested"), { recursive: true });
+    const victim = path.join(outside, "nested", "AGENTS.md");
+    await writeFile(victim, "private notes\n");
+    assert.equal(run(root, ["init", "--location", ".agents", "--no-notebook", "--yes"]).status, 0);
+
+    const markerPath = path.join(root, ".drawbore-install.json");
+    const marker = JSON.parse(await readFile(markerPath, "utf8"));
+    marker.instructions = ["linked/AGENTS.md"];
+    await writeFile(markerPath, `${JSON.stringify(marker, null, 2)}\n`);
+    await symlink(outside, path.join(root, "linked"), "dir");
+
+    const update = run(root, ["update"]);
+    assert.equal(update.status, 1);
+    assert.match(update.stderr, /outside the project/);
+    assert.equal(await readFile(victim, "utf8"), "private notes\n");
+
+    const uninstall = run(root, ["uninstall"]);
+    assert.equal(uninstall.status, 1);
+    assert.match(uninstall.stderr, /outside the project/);
+    assert.equal(await readFile(victim, "utf8"), "private notes\n");
+  } finally {
+    await rm(outside, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("a malformed install marker is reported instead of treated as no install", async () => {
+  const root = await repo();
+  try {
+    await writeFile(path.join(root, ".drawbore-install.json"), "{not json\n");
+
+    const update = run(root, ["update"]);
+    assert.equal(update.status, 1);
+    assert.match(update.stderr, /marker .* is malformed/);
+
+    const uninstall = run(root, ["uninstall"]);
+    assert.equal(uninstall.status, 1);
+    assert.match(uninstall.stderr, /marker .* is malformed/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("explicit init supports skills-only installs", async () => {
+  const root = await repo();
+  try {
+    const result = run(root, ["init", "--location", ".agents", "--no-notebook", "--no-instruction", "--yes"]);
+    assert.equal(result.status, 0, result.stderr);
+    await readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md"));
+    await assert.rejects(readFile(path.join(root, ".drawbore", "index.md")));
+    await assert.rejects(readFile(path.join(root, "AGENTS.md")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("init rejects contradictory notebook and instruction flags", async () => {
+  const root = await repo();
+  try {
+    const notebook = run(root, ["init", "--notebook", "--no-notebook", "--yes"]);
+    assert.equal(notebook.status, 2);
+    assert.match(notebook.stderr, /--notebook and --no-notebook cannot be combined/);
+
+    const instruction = run(root, ["init", "--instruction", "AGENTS.md", "--no-instruction", "--yes"]);
+    assert.equal(instruction.status, 2);
+    assert.match(instruction.stderr, /--instruction and --no-instruction cannot be combined/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("init refuses a corrupt marker before writing anything", async () => {
+  const root = await repo();
+  try {
+    await writeFile(path.join(root, ".drawbore-install.json"), "{not json\n");
+
+    const result = run(root, ["init", "--location", ".agents", "--no-notebook", "--yes"]);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /marker .* is malformed/);
+    await assert.rejects(readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md")));
+    await assert.rejects(readFile(path.join(root, "AGENTS.md")));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -468,7 +588,7 @@ test("update --check reports a modified skill and a missing one", async () => {
 
 test("check --json --fix emits one parseable document", async () => {
   const root = await notebookRepo({
-    "decisions/0007-record.md": `---\nid: 6\nstatus: accepted\n---\n\n# Record\n`,
+    "decisions/0007-record.md": `---\nid: 6\nstatus: accepted\nsignificance: durable\ndate: 2026-11-19\n---\n\n# Record\n\n## Context\n\nWhy the decision was needed.\n\n## Decision\n\nWhat was chosen.\n\n## Rationale\n\nWhy it was chosen.\n\n## Alternatives considered\n\n- Alternative — why it was not chosen.\n\n## Consequences\n\n- Consequence.\n`,
   });
   try {
     const result = run(root, ["check", "--json", "--fix"]);

@@ -176,6 +176,32 @@ test("the installed instruction block states the same reader bar", async () => {
   );
 });
 
+// Scaffolding writes the developer's repository, but the skill must not treat
+// permission to generate files as permission to publish their history. The
+// commit and push actions each need an explicit consent that names them.
+const INIT_PROJECT_CONSENT_CLAUSE =
+  "Before committing or pushing the scaffold, obtain explicit developer consent naming each exact action.";
+const INIT_PROJECT_GENERATION_IS_NOT_CONSENT =
+  "Consent to generate the scaffold is not consent to commit or push it.";
+const INIT_PROJECT_ACTIONS_ARE_SEPARATE =
+  "Consent to commit does not authorize a push, and consent to push does not authorize a commit.";
+
+test("init-project requires explicit consent before committing or pushing the scaffold", async () => {
+  const text = await skillText("init-project");
+  assert.ok(
+    text.includes(INIT_PROJECT_CONSENT_CLAUSE),
+    "skills/init-project/SKILL.md must require explicit consent before a scaffold commit or push",
+  );
+  assert.ok(
+    text.includes(INIT_PROJECT_GENERATION_IS_NOT_CONSENT),
+    "skills/init-project/SKILL.md must not treat scaffold-generation consent as commit or push consent",
+  );
+  assert.ok(
+    text.includes(INIT_PROJECT_ACTIONS_ARE_SEPARATE),
+    "skills/init-project/SKILL.md must require separate consent for a scaffold commit and push",
+  );
+});
+
 // `frame`'s brief is the other artifact a later session meets cold; the rule
 // has to reach the section list, not only the skill's prose.
 test("the Change Brief format states the reader bar", async () => {

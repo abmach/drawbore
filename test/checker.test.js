@@ -31,10 +31,34 @@ const ARTIFACTS = {
   "stack.md": "# Technical Choices\n",
 };
 
-function decision({ id, status = "accepted", supersededBy = null, slug = "record" }) {
-  const lines = ["---", `id: ${id}`, `status: ${status}`];
+function decision({ id, status = "accepted", significance = "durable", date = "2026-11-19", supersededBy = null, slug = "record", body = true }) {
+  const lines = ["---", `id: ${id}`, `status: ${status}`, `significance: ${significance}`, `date: ${date}`];
   if (supersededBy !== null) lines.push(`superseded_by: ${supersededBy}`);
   lines.push("---", "", `# Decision ${id}`, "");
+  if (body) {
+    lines.push(
+      "## Context",
+      "",
+      "Why the decision was needed.",
+      "",
+      "## Decision",
+      "",
+      "What was chosen.",
+      "",
+      "## Rationale",
+      "",
+      "Why it was chosen.",
+      "",
+      "## Alternatives considered",
+      "",
+      "- Alternative — why it was not chosen.",
+      "",
+      "## Consequences",
+      "",
+      "- Consequence.",
+      "",
+    );
+  }
   return lines.join("\n");
 }
 
@@ -69,6 +93,70 @@ test("clean notebook produces no findings", async () => {
   });
   try {
     assert.deepEqual(await checkNotebook(notebook), []);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("missing notebook index is reported", async () => {
+  const { root, notebook } = await notebookWith({});
+  try {
+    await rm(path.join(notebook, "index.md"));
+    const findings = await checkNotebook(notebook);
+    assert.ok(codes(findings).includes("E009"));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("decision filename must use a numeric prefix and kebab-case slug", async () => {
+  const { root, notebook } = await notebookWith({
+    "decisions/record.md": decision({ id: 1, slug: "record" }),
+  });
+  try {
+    const findings = await checkNotebook(notebook);
+    assert.ok(codes(findings).includes("E010"));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("missing decision front matter fields are reported", async () => {
+  const { root, notebook } = await notebookWith({
+    "decisions/0001-first.md": "---\nid: 0001\n---\n\n# Decision\n",
+  });
+  try {
+    const findings = await checkNotebook(notebook);
+    const found = codes(findings);
+    assert.ok(found.includes("E011"));
+    assert.ok(found.includes("E012"));
+    assert.ok(found.includes("E013"));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("invalid decision significance and date are reported", async () => {
+  const { root, notebook } = await notebookWith({
+    "decisions/0001-first.md": decision({ id: 1, significance: "temporary", date: "2026-02-30" }),
+  });
+  try {
+    const findings = await checkNotebook(notebook);
+    const found = codes(findings);
+    assert.ok(found.includes("E014"));
+    assert.ok(found.includes("E015"));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("missing decision sections are reported", async () => {
+  const { root, notebook } = await notebookWith({
+    "decisions/0001-first.md": decision({ id: 1, body: false }),
+  });
+  try {
+    const findings = await checkNotebook(notebook);
+    assert.equal(findings.filter((finding) => finding.code === "E016").length, 5);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -253,10 +341,10 @@ test("--fix renumbers duplicate ids without touching bodies", async () => {
     assert.equal(result.changed, true);
     const renamed = await readFile(path.join(notebook, "decisions", "0002-first.md"), "utf8");
     assert.match(renamed, /^id: 0002$/m);
-    // The index still names the pre-fix path; the rename moves the record out
-    // from under that link, so the map must be corrected with it.
+    // The rename moves the record out from under its index link, so --fix
+    // updates the map with it and leaves no stale-link finding behind.
     const findings = await checkNotebook(notebook);
-    assert.deepEqual(codes(findings), ["W003", "W004"]);
+    assert.deepEqual(codes(findings), []);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

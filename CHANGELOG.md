@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-11-20
+
+### Security
+
+- The install marker's instruction destinations are now checked with canonical containment, not lexical path containment alone. A marker entry whose existing target or any existing ancestor resolves outside the project is refused by `update` and `uninstall` before anything is written, so a symlink inside the repository can no longer redirect a write or a deletion to a file outside it. Broken symlinks and symlink loops have no canonical target and are refused as well.
+
+### Fixed
+
+- Running `drawbore init` again no longer orphans the previous install. The marker accumulates locations, instruction files, and per-location skill sets instead of replacing them, so one later `drawbore uninstall` reverses every accumulated location. Each location keeps its own skill subset through `update` and `uninstall`; a refresh no longer widens a restricted location to the global skill list.
+- A malformed or unreadable `.drawbore-install.json` is reported as a corrupt marker with exit 1 instead of being silently treated as "no install". `init` reads and validates the existing marker before its first write, so a corrupt marker cannot leave a partially installed tree behind.
+- `drawbore check` now requires the notebook index and enforces the decision-record format the `record` skill documents: a numeric filename prefix with a kebab-case slug, `id`, `status`, `significance`, and `date` front matter, a valid significance value, a real calendar date, and the Context, Decision, Rationale, Alternatives considered, and Consequences sections. New codes E009–E016 report each violation.
+- `drawbore check --fix` updates `index.md` links when it renumbers a duplicate decision, so the repair no longer leaves the stale-link warnings it caused.
+- The `init-project` skill no longer tells an agent to commit and push the scaffold unconditionally. Commit and push each require their own explicit developer consent, and consent to generate the scaffold is not consent to publish it.
+
+### Added
+
+- `drawbore init --no-notebook` and `drawbore init --no-instruction` let a non-interactive caller install skills only, without creating a notebook or editing an instruction file. Contradictory flag pairs are rejected with exit 2 instead of being resolved by option order.
+
+### Changed
+
+- The repository runtime floor is now Node >= 22.22.2, matching the locked `@inquirer/prompts` 8.8.0 engine range. The floor CI job is pinned to `node:22.22.2` instead of floating on the latest Node 22 release, and the staged publish job waits for that job as well as the modern-runtime job.
+- CI runs `npm run check`, a new script that applies the strict structural check to this repository's own Drawbore notebook, on every branch, merge request, and tag.
+- The README documents every `.drawbore-install.json` field and the complete explicit-init option matrix.
+
 ## [0.6.0] - 2026-11-19
 
 ### Added
@@ -177,6 +201,7 @@ Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged releas
 - Skill conflicts are decided by content rather than by name. A skill directory is foreign only when its contents diverge from what the package ships; a file/directory mismatch is preserved instead of blocking the install.
 - `release` branches on `publish mode` and `pipeline`, reading them from `AGENTS.md`. Sections written before those fields existed are still handled: the mode is inferred from the prose and the CI file, and the package field is read as either `package` or `npm package`.
 
+[0.7.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.6.0...v0.7.0
 [0.6.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.3...v0.6.0
 [0.5.3]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.2...v0.5.3
 [0.5.2]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.1...v0.5.2

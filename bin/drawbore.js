@@ -52,6 +52,10 @@ const DRIFT_REASONS = Object.freeze({
 
 const SUPPORTED_INSTRUCTIONS = new Set(["AGENTS.md", "CLAUDE.md"]);
 
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 const args = process.argv.slice(2);
 const packageData = await loadPackageData();
 const command = args[0];
@@ -125,13 +129,21 @@ async function runInit(packageData) {
   const inspection = await inspectProject(root, packageData);
   const ui = createUi();
 
+  // The existing marker decides what a later `init` keeps owning, so it is
+  // read and validated before the first write. A corrupt marker or an invalid
+  // destination must not be discovered only after skills or instruction files
+  // have already changed.
+  const existingMarker = await readInstallMarker(root);
+  readMarkerLocations(existingMarker);
+  await assertMarkerInstructions(root, existingMarker);
+
   // No flags + non-interactive (pipe, CI, test): the interactive confirm is
   // the gate, and a stream nobody reads cannot answer it. Falling back to
   // defaults instead would install seven skills and a notebook in CI with no
   // decision behind them, so print the plan and ask for explicit flags.
   if (!plan && !ui.isInteractive) {
     console.error("Drawbore needs explicit flags when stdin is not a terminal.");
-    console.error("Usage: drawbore init --location <dir> [--notebook] [--instruction <file>] [--skills <list>] [--yes]");
+    console.error("Usage: drawbore init --location <dir> [--notebook|--no-notebook] [--instruction <file>|--no-instruction] [--skills <list>] [--yes]");
     process.exit(2);
   }
 
@@ -161,6 +173,7 @@ async function runInit(packageData) {
     }
 
     const selection = plan?.skills ? { ...packageData, skills: plan.skills } : packageData;
+    if (plan?.skills) selection.skillsByLocation = Object.fromEntries(selectedLocations.map((location) => [location, plan.skills]));
 
     // Every destination is validated before the first write, so a conflict in
     // one location cannot leave the others installed without a marker.
@@ -197,7 +210,7 @@ async function runInit(packageData) {
       instructionFiles.push(target.instructionFile);
     }
 
-    await writeInstallMarker(root, selection, selectedLocations, notebookCreated ? notebookDirectory : null, [...new Set(instructionFiles)], skillHashes, existedBefore);
+    await writeInstallMarker(root, selection, selectedLocations, notebookCreated ? notebookDirectory : null, [...new Set(instructionFiles)], skillHashes, existedBefore, existingMarker);
     console.log(formatInstallResult(selectedLocations, notebookCreated, instructionFiles, preservedSkillFiles, replacedSkillFiles));
   } finally {
     ui.close();
@@ -246,6 +259,7 @@ async function runUpdate(options, packageData) {
   const selection = recordedSkills === null
     ? { ...packageData }
     : { ...packageData, skills: [...new Set(recordedSkills)] };
+  if (isRecord(marker.skillsByLocation)) selection.skillsByLocation = marker.skillsByLocation;
   const drifts = await diffSkills(root, locations, selection);
 
   console.log(`Drawbore ${packageData.version}`);
@@ -300,7 +314,7 @@ async function runUpdate(options, packageData) {
   // A refresh keeps the recorded notebook: `update` never creates one, and
   // nulling the field would erase the record a previous `init` wrote.
   const notebook = typeof marker.notebook === "string" ? marker.notebook : null;
-  await writeInstallMarker(root, selection, locations, notebook, applied, skillHashes, marker.existedBefore);
+  await writeInstallMarker(root, selection, locations, notebook, applied, skillHashes, marker.existedBefore, marker);
   console.log(formatInstallResult(locations, false, applied, preservedSkillFiles, replacedSkillFiles, { noun: "Updated", firstInstall: false }));
 }
 
@@ -355,6 +369,7 @@ async function runUninstall(options, packageData) {
     ? marker.skills.filter((skill) => packageData.skills.includes(skill))
     : packageData.skills;
   const selection = { ...packageData, skills: [...new Set(recordedSkills)] };
+  if (isRecord(marker.skillsByLocation)) selection.skillsByLocation = marker.skillsByLocation;
 
   console.log(`Drawbore ${packageData.version}`);
   console.log(`Project: ${root}`);
@@ -439,6 +454,7 @@ function parseExplicitOptions(options, packageData) {
 
   const locations = [];
   const instructions = [];
+  let instructionsDisabled = false;
   let notebook = null;
   let force = false;
   let dryRun = false;
@@ -456,10 +472,19 @@ function parseExplicitOptions(options, packageData) {
         locations.push(location);
       }
     } else if (option === "--notebook") {
+      if (notebook === false) throw new Error("--notebook and --no-notebook cannot be combined");
       notebook = true;
+    } else if (option === "--no-notebook") {
+      if (notebook === true) throw new Error("--notebook and --no-notebook cannot be combined");
+      notebook = false;
+    } else if (option === "--no-instruction") {
+      if (instructionsDisabled) throw new Error("--no-instruction cannot be repeated");
+      if (instructions.length > 0) throw new Error("--instruction and --no-instruction cannot be combined");
+      instructionsDisabled = true;
     } else if (option === "--instruction") {
       const value = options[++index];
       if (value === undefined) throw new Error("Missing value for --instruction");
+      if (instructionsDisabled) throw new Error("--instruction and --no-instruction cannot be combined");
       for (const instructionFile of splitList(value)) {
         if (!SUPPORTED_INSTRUCTIONS.has(instructionFile)) throw new Error(`Unsupported instruction file: ${instructionFile}`);
         instructions.push({ instructionFile });
@@ -484,9 +509,10 @@ function parseExplicitOptions(options, packageData) {
 
   if (locations.length === 0) locations.push(".agents");
   if (notebook === null) notebook = true;
-  if (instructions.length === 0) {
+  const namedInstructions = [...instructions];
+  if (!instructionsDisabled && namedInstructions.length === 0) {
     for (const instructionFile of new Set(locations.map((location) => supportedLocations[location]))) {
-      instructions.push({ instructionFile });
+      namedInstructions.push({ instructionFile });
     }
   }
 
@@ -496,7 +522,9 @@ function parseExplicitOptions(options, packageData) {
     force,
     dryRun,
     skills,
-    instructions: [...new Map(instructions.map((target) => [target.instructionFile, target])).values()],
+    instructions: instructionsDisabled
+      ? []
+      : [...new Map(namedInstructions.map((target) => [target.instructionFile, target])).values()],
   };
 }
 
@@ -622,8 +650,10 @@ init options:
   --location <dir>      Harness location to install into (repeatable).
                         One of: .agents, .claude, .codex, .cursor, .omp, .opencode.
   --notebook            Create or refresh the .drawbore templates.
+  --no-notebook         Do not create or refresh the .drawbore templates.
   --instruction <file>  Add the Drawbore block to an instruction file (repeatable).
                         One of: AGENTS.md, CLAUDE.md.
+  --no-instruction      Do not add the Drawbore block to any instruction file.
   --skills <list>       Comma-separated subset of skills to install.
   --force               Replace skills owned by another package.
   --yes                 Accept defaults without prompting.

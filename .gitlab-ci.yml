@@ -16,8 +16,9 @@
 
 # The suite must run before a tag reaches the publish job, and on every branch
 # and merge request — otherwise the first execution of `npm test` happens
-# inside the release job, after the version bump. The second job tests the
-# declared `engines` floor; the publish job runs the newest LTS.
+# inside the release job, after the version bump. Both test jobs also run the
+# strict notebook check. The second job tests the declared `engines` floor;
+# the publish job runs the newest LTS.
 test:
   stage: test
   image: node:24
@@ -28,6 +29,7 @@ test:
   script:
     - npm ci
     - npm test
+    - npm run check
 
 # The floor moved with `@inquirer/prompts` 8.8.0, which requires
 # `^22.22.2 || ^24.15.0 || >=26.0.0`: a Node 20 job installs it with 85
@@ -35,7 +37,7 @@ test:
 # job on the oldest line the manifest allows, not on a line it does not.
 test-node22:
   stage: test
-  image: node:22
+  image: node:22.22.2
   rules:
     - if: '$CI_COMMIT_BRANCH'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -43,12 +45,14 @@ test-node22:
   script:
     - npm ci
     - npm test
+    - npm run check
 
 stage-npm:
   stage: deploy
   image: node:24
   needs:
     - test
+    - test-node22
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
   id_tokens:

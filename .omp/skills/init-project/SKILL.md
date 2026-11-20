@@ -85,4 +85,8 @@ The `release` skill's provider notes carry the version floors, token audiences, 
 
 Record the result in `## Release`: `publish mode: <mode>` and `pipeline: <path>`. When the user declines a pipeline, write `pipeline: none — release manually` so the release skill knows to skip the publish tail.
 
-After scaffolding: commit, push to the canonical forge, then cut the first release with the `release` skill.
+## Commit and push consent
+
+After scaffolding, stop before changing version-control state. Before committing or pushing the scaffold, obtain explicit developer consent naming each exact action. Put the consent request in a rendered form that states the command, its effect, and whether the action is local or public. Consent to generate the scaffold is not consent to commit or push it. Consent to commit does not authorize a push, and consent to push does not authorize a commit. Run only the actions the developer approved.
+
+After consent, commit and push to the canonical forge as authorized, then cut the first release with the `release` skill under that skill's own release-authorization gate.
