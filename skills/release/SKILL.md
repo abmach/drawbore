@@ -56,7 +56,7 @@ Run this after the tag pipeline is green when `pipeline:` names a CI file, or by
    <registry> stage approve <stage-id>    # prompts 2FA → LIVE
    ```
 
-2. Verify: the registry's version endpoint, the verify commands or URLs from `## Release`, and provenance state. A staged release publishes at approval time on the maintainer's machine, with no CI/OIDC build context — expect `attestations: null` and check rather than assume.
+2. Verify: the registry's version endpoint, the verify commands or URLs from `## Release`, and provenance state. `--provenance` on `stage publish` mints the attestation in CI at stage time, not at approval time, so a staged release's provenance badge can be present. Check the attestation bundle rather than assuming either presence or absence: `npm view <pkg>@<version> dist.attestations` must name the SLSA predicate, and the registry's attestation endpoint (`/-/npm/v1/attestations/<pkg>@<version>`, when the registry exposes one) carries the bundle whose subject digest is the tarball's and whose predicate `builder.id` is the CI runner and `invocation.configSource.entryPoint` the publish job.
 
 ## Repository-only tail (publish mode is `none`, or no `## Release` section)
 
@@ -91,7 +91,7 @@ Read only the note that matches the repository. Do not add a workflow file for a
 
 - Publishing from CI with provenance compares the manifest's `repository.url` against the CI provider in the OIDC token. A mismatch fails with `422 Unprocessable Entity — Error verifying sigstore provenance bundle`. Point the manifest at the forge the pipeline runs on.
 - The OIDC audience must be `npm:registry.npmjs.org` (the `npm:` prefix is required); the sigstore token uses `aud: sigstore`.
-- `--provenance` on `stage publish` is accepted, but the publish happens at `stage approve` on the maintainer's machine, where no CI/OIDC build context exists — staged releases have come out with `attestations: null`. Treat the provenance badge as absent for staged releases unless proven otherwise.
+- `--provenance` on `stage publish` is minted in CI at stage time, before approval; approval publishes the staged artifact as-is. drawbore@0.8.0's registry bundle carries an SLSA v0.2 predicate built by GitLab CI pipeline 3097342347 (runner 54907241, entry point `stage-npm`, `CI_COMMIT_SHA f5aedd3ea40e67d83b28fd03337c8a5d05a000dc`). Check the bundle with `npm view <pkg>@<version> dist.attestations` and the registry attestation endpoint; do not assume either presence or absence.
 - Staged publishing requires npm CLI >= 11.15 and Node >= 22.14; `node:24` bundles an older npm, so the job must `npm install -g npm@11`.
 - Staging holds ONE package per version. Re-tagging the same version while a stage is pending collides — reject the stale staged version first.
 - A brand-new package's first stage publishes a public `0.0.0-stage` placeholder — that is how the name gets claimed before first approval.
