@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.1] - 2026-11-21
 
+Published to npm as `drawbore@0.8.1` — staged via GitLab CI, maintainer approved with 2FA.
+
 ### Fixed
 
 - `release` no longer tells a maintainer to expect `attestations: null` for a staged publish. `--provenance` on `stage publish` mints the attestation in CI at stage time, so approval publishes a staged artifact whose provenance badge is already present; drawbore@0.8.0's registry bundle carries an npm publish attestation plus an SLSA v0.2 predicate built by GitLab CI pipeline 3097342347 (runner 54907241, entry point `stage-npm`, commit `f5aedd3ea40e67d83b28fd03337c8a5d05a000dc`). The skill now says to read both predicate types from the attestation bundle with `npm view <pkg>@<version> dist.attestations` and the registry attestation endpoint, never assuming either presence or absence.
