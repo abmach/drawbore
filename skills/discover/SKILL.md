@@ -31,15 +31,15 @@ Consider these durable artifacts, but create only those with confirmed content:
 
 Do not seed generic technology preferences, testing doctrine, or design doctrine. The repository's actual choices are authoritative. Propose a rule only when project-specific evidence supports it.
 
-## Confirm candidates in batches
+## Confirm candidates one at a time
 
 Before proposing, read `.drawbore/index.md` and every existing record that could cover a candidate. Search by project concept, not only by the proposed filename, and identify the exact existing entry to amend or state that no equivalent entry exists. Do not propose a duplicate when an existing record owns the fact.
 
-Present candidates with evidence and a concrete destination, then collect the batch in a rendered form: one checkbox group per artifact offering **apply as proposed**, **edit the developer's wording**, **skip**, or **skip the remaining candidates** for that artifact; the candidate text and its evidence inline in the form; and a free-text field for the wording **edit** asks for. A batch of six artifacts cannot be settled in prose — a prose list invites one blanket answer that the writer then over-applies.
+Present candidates one per form page: the candidate text, its evidence, and its concrete destination above the fields; one checkbox group offering **apply as proposed**, **edit the developer's wording**, or **skip**; and a free-text field for the wording **edit** asks for. Each page opens with a map line naming the candidate, its position in the total, and how many remain, and ends the turn. A batch of six artifacts cannot be settled in one form — a single form invites one blanket answer that the writer then over-applies, and the developer gets compressed labels instead of the proposals.
 
 Then wait for the developer's response. **Apply as proposed** approves exactly the displayed proposal; **edit** requires revised wording to be displayed and approved; **skip** changes nothing. Prefer the developer's exact wording. Mark inferred rationale as inferred. Never write, overwrite, amend, or delete an unconfirmed candidate.
 
-A turn that ends by asking the developer to choose ends in a rendered form, not in prose: the question tool is a blocking prompt that cannot be skipped, prose can be scrolled past and answered by momentum. When no form tool exists, ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
+A turn that ends by asking the developer to choose ends in a rendered form, not in prose: the question tool is a blocking prompt that cannot be skipped, prose can be scrolled past and answered by momentum. A form carries **one decidable unit** — one candidate with its text and evidence — and a page that would compress several candidates into labels is a page that lost the decision. When no form tool exists, ask one candidate per plain-text message, map line first, and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
 
 ## Create the record
 

@@ -1,6 +1,6 @@
 {
-  "version": "0.7.0",
-  "installedAt": "2026-11-20T12:48:36.222Z",
+  "version": "0.8.0",
+  "installedAt": "2026-11-21T11:08:19.590Z",
   "namespace": "drawbore",
   "skills": [
     "discover",
@@ -32,15 +32,16 @@
   },
   "skillHashes": {
     ".omp": {
-      "skills/discover/SKILL.md": "149db1f4eb8f832bc7beb07ff6a7f67406e763f836d1e601c60520fd91e66be0",
-      "skills/recall/SKILL.md": "905b3d6cae31edbc3b4ea060f94df37d5950bd3519adf8efc13a9f3dc67def43",
+      "skills/discover/SKILL.md": "d6969acd46a327fea78ff1bed29e93b783b7d776bf2165056fde2d9497441f81",
+      "skills/recall/SKILL.md": "169dfdf0ad7839c12492d7e60d9ea82042d0c47da0b399b2af632d5ebfecb426",
       "skills/frame/references/change-brief.md": "b40afcecedae6f041ac8bf9a163ca154c5329a5c1524a84f29633b056eac089a",
-      "skills/frame/SKILL.md": "f6f3a17766ed954d50307459fc56f41981e3e86164dcb9aa96c7c795630e7109",
+      "skills/frame/SKILL.md": "198bee6e7feb66585968653e03912dfa49caa860170bca73bf85036c963dec27",
       "skills/record/references/artifact-formats.md": "4904ce4ab7d2ae3e6054cbc7c29dbcb7062bfb206b1a311ae1af41ece30556a4",
-      "skills/record/SKILL.md": "eaa18b0aab4e77ff7eb2b8fc85d760f0afbcdfb20003640c8b47a1ddc8b81984",
-      "skills/review/SKILL.md": "2190b56b9e4e484490ccba4a85fad705ab2b9b5d83f43b78878676b090c049d9",
-      "skills/init-project/SKILL.md": "3e919b5ec0f8dc7b8e406b0f4550c1eb1bf2e2ccfbd401ae5c43dc49801c07a3",
-      "skills/release/SKILL.md": "866580db1232609691e51814b1cce0f7a78b5002dd6560dfb438476880092e4e"
+      "skills/record/references/questions.md": "ba10ff47cc98eba7d64fc7c9d9e899c669230a7ad56be0a07e1f59aad43133f8",
+      "skills/record/SKILL.md": "3c6446798090483178b90a69229516817ebe382c19eb24b13bbf1457710b6d24",
+      "skills/review/SKILL.md": "a8aac07d863abe7cdd36b1cb7f08e8a32a63c0325b763d3480aadedb5429a22c",
+      "skills/init-project/SKILL.md": "0f2a7fbcd310296a4c25c4547381d302942027ca6da1634f53a98d870484e649",
+      "skills/release/SKILL.md": "c655382527f8aae54d98d1b2e5e79d0c729378a386192bfcfe83bcdc8254d6f3"
     }
   }
 }

@@ -31,9 +31,21 @@ const UNGATED = ["discover", "init-project", "release", "review"];
 
 const skillsDir = path.resolve("skills");
 
+// Only a directory carrying a SKILL.md is a skill; a stray directory without one
+// is not, so the scan filters on the file.
 async function skills() {
   const entries = await readdir(skillsDir, { withFileTypes: true });
-  return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
+  const names = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    try {
+      await readFile(path.join(skillsDir, entry.name, "SKILL.md"));
+    } catch {
+      continue;
+    }
+    names.push(entry.name);
+  }
+  return names.sort();
 }
 
 function frontMatter(text) {
@@ -101,14 +113,23 @@ test("every skill that asks the developer to decide says how", async () => {
 
 // A skill that names a decision list but not its rendering invites prose. These
 // four carry batch or per-item choices; a prose question there is the failure
-// the trigger exists to prevent.
+// the trigger exists to prevent. Since decision 0006 a form carries one
+// decidable unit, so the same four must also say how they split: more units mean
+// more pages, never compressed labels. A skill that says "rendered form" and
+// keeps a batch instruction fails here.
 const FORM_SKILLS = ["discover", "record", "recall", "review"];
+const UNIT_RULE = "one decidable unit";
 
 test("skills with a batch or per-item decision name the form that collects it", async () => {
   for (const skill of FORM_SKILLS) {
     const text = await skillText(skill);
     assert.match(text, /rendered form/, `${skill}/SKILL.md offers a decision list without naming the form that collects it`);
     assert.match(text, /free-text field|free-text path/, `${skill}/SKILL.md must keep a free-text path for answers the options do not cover`);
+    assert.match(
+      text,
+      new RegExp(UNIT_RULE),
+      `${skill}/SKILL.md must state that a form carries ${UNIT_RULE} (decision 0006)`,
+    );
   }
 });
 

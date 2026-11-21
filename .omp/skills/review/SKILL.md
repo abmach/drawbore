@@ -60,7 +60,7 @@ Lead with a 3–5 line verdict: what the repo is, its strongest and weakest aspe
 4. **Proposed order of work** — 3–5 numbered steps referencing those ids, highest ratio first, each with a verifiable done-condition.
 5. **Unverified** — `[INFERENCE]` items and what check would settle each.
 
-End with one rendered form, not a prose question — the ids are the choice, and a form is what makes it one. One checkbox per finding, grouped by severity, pre-checked with the ids the proposed order names, each label carrying its effort and confidence; a free-text field for ids the groups cannot express; and the ranked table above as context so the cost of each choice is visible without scrolling. Then stop. Do not start implementing from a vague "yes" or "go ahead" — that authorizes nothing specific.
+End phase 1 with a rendered form, not a prose question — the ids are the choice, and a form is what makes it one. A form asks about **one decidable unit**: one finding per page, or one small group of findings that share a fix and are genuinely decided together. Each page shows that finding's claim, evidence, why it matters, fix, and effort above the fields; one checkbox group per finding offers **apply**, **edit**, or **skip** with a free-text field for revised wording; and each page opens with a map line naming its position in the total and how many remain. Put the findings the proposed order names first. Then stop. Do not start implementing from a vague "yes" or "go ahead" — that authorizes nothing specific.
 
 ## Phase 2 — approval-gated implementation
 
@@ -68,9 +68,9 @@ Enter only on an explicit selection of ids or step numbers.
 
 ### 2.1 Confirm the scope, in writing
 
-Before the first edit, restate the selected ids with: files each will touch, the change in one line, the done-condition, and the verification command. Then require an explicit confirmation naming that scope, in a rendered form with one checkbox per selected id so the developer can veto a single item rather than the whole batch. A single "yes" to the phase-1 question is not this confirmation.
+Before the first edit, restate the selected ids with: files each will touch, the change in one line, the done-condition, and the verification command. Then require an explicit confirmation naming that scope, in a rendered form with one checkbox per selected id so the developer can veto a single item rather than the whole batch. A single "yes" to the phase-1 question is not this confirmation. When the restatement is long enough that a single checkbox per id would compress the text, confirm one id per page with the same checkbox group and a map line naming the id, its position, and how many remain; each page ends the turn, and a veto on one page leaves the earlier approvals standing.
 
-A turn that ends by asking the developer to choose ends in a rendered form, not in prose: the question tool is a blocking prompt that cannot be skipped, prose can be scrolled past and answered by momentum. When no form tool exists, ask in plain text and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
+A turn that ends by asking the developer to choose ends in a rendered form, not in prose: the question tool is a blocking prompt that cannot be skipped, prose can be scrolled past and answered by momentum. When no form tool exists, ask one id per plain-text message, map line first, and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
 
 ### 2.2 Baseline first
 

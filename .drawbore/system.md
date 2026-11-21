@@ -23,7 +23,7 @@
 
 ## Skills
 
-- Seven portable skills: `discover`, `recall`, `frame`, `record`, `review`, `init-project`, `release`.
+- Seven portable skills: `discover`, `recall`, `frame`, `record`, `review`, `init-project`, `release`. Each carries its own `references/` where it needs one; `record` owns `references/questions.md`, the shared rule that a choice form carries one decidable unit and splits the rest into map-lined pages, which every skill states in its own words.
 
 ## Distribution
 
