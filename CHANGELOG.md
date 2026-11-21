@@ -5,11 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.1] - 2026-11-21
 
 ### Fixed
 
-- `release` no longer tells a maintainer to expect `attestations: null` for a staged publish. `--provenance` on `stage publish` mints the attestation in CI at stage time, so approval publishes a staged artifact whose provenance badge is already present; drawbore@0.8.0's registry bundle carries an npm publish attestation plus an SLSA v0.2 predicate built by GitLab CI pipeline 3097342347 (runner 54907241, entry point `stage-npm`, commit `f5aedd3ea40e67d83b28fd03337c8a5d05a000dc`). The skill now says to read both predicate types from the attestation bundle with `npm view <pkg>@<version> dist.attestations` and the registry attestation endpoint, never assuming either presence or absence. This correction is not in the 0.8.0 tarball, which shipped the older guidance.
+- `release` no longer tells a maintainer to expect `attestations: null` for a staged publish. `--provenance` on `stage publish` mints the attestation in CI at stage time, so approval publishes a staged artifact whose provenance badge is already present; drawbore@0.8.0's registry bundle carries an npm publish attestation plus an SLSA v0.2 predicate built by GitLab CI pipeline 3097342347 (runner 54907241, entry point `stage-npm`, commit `f5aedd3ea40e67d83b28fd03337c8a5d05a000dc`). The skill now says to read both predicate types from the attestation bundle with `npm view <pkg>@<version> dist.attestations` and the registry attestation endpoint, never assuming either presence or absence.
 
 ## [0.8.0] - 2026-11-21
 
@@ -215,8 +215,9 @@ Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged releas
 - Skill conflicts are decided by content rather than by name. A skill directory is foreign only when its contents diverge from what the package ships; a file/directory mismatch is preserved instead of blocking the install.
 - `release` branches on `publish mode` and `pipeline`, reading them from `AGENTS.md`. Sections written before those fields existed are still handled: the mode is inferred from the prose and the CI file, and the package field is read as either `package` or `npm package`.
 
+[0.8.1]: https://gitlab.com/abmach/drawbore/-/compare/v0.8.0...v0.8.1
 [0.8.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.7.0...v0.8.0
-[Unreleased]: https://gitlab.com/abmach/drawbore/-/compare/v0.8.0...HEAD
+[Unreleased]: https://gitlab.com/abmach/drawbore/-/compare/v0.8.1...HEAD
 [0.7.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.6.0...v0.7.0
 [0.6.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.3...v0.6.0
 [0.5.3]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.2...v0.5.3
