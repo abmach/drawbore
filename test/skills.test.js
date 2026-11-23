@@ -171,6 +171,20 @@ test("skills that write durable context keep the rule non-degrading", async () =
   }
 });
 
+test("release verification does not mutate the repository after publication", async () => {
+  const text = await skillText("release");
+  assert.match(
+    text,
+    /Verification is read-only: do not add, edit, or remove tracked files to record publication/i,
+    "release must not create a post-release documentation commit",
+  );
+  assert.match(
+    text,
+    /CHANGELOG\.md/,
+    "release must identify the changelog as affected by post-publication edits",
+  );
+});
+
 test("skills that work without a notebook do not claim to require one", async () => {
   for (const skill of UNGATED) {
     const text = await skillText(skill);

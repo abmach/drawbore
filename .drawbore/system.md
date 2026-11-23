@@ -24,6 +24,7 @@
 ## Skills
 
 - Seven portable skills: `discover`, `recall`, `frame`, `record`, `review`, `init-project`, `release`. Each carries its own `references/` where it needs one; `record` owns `references/questions.md`, the shared rule that a choice form carries one decidable unit and splits the rest into map-lined pages, which every skill states in its own words.
+- The `release` skill treats publication verification as read-only. After the release commit and tag, it reports registry approval, version availability, and provenance without editing tracked files, including `CHANGELOG.md`. A failed live publication requires a new version; a rejected staged version with no live registry version may follow the re-tagging rules.
 
 ## Distribution
 

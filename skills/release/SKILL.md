@@ -40,6 +40,8 @@ If the registry reports that the package does not exist, the package must exist 
 
 Run this after the tag pipeline is green when `pipeline:` names a CI file, or by hand when it says `none`.
 
+**Verification is read-only: do not add, edit, or remove tracked files to record publication.** The release commit and tag already describe the version being published; registry approval, version availability, and provenance are verification results to report to the developer, not changelog facts to record afterward. In particular, do not add a "published to npm" or equivalent note to `CHANGELOG.md` after the release commit: that creates an immediate post-release documentation commit and leaves the tagged release different from the repository's final state. A failed publication does not authorize changing the tagged release's documentation. Repair the pipeline, then use a new version if the failed version is live; when a staged version was rejected and no live registry version exists, follow the re-tagging rules below.
+
 **`direct`** — the registry's publish command runs with the CI credential, and the version is public as soon as it succeeds:
 
 ```
