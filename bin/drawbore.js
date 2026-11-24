@@ -5,6 +5,7 @@ import {
   addInstruction,
   assertInstructionTarget,
   assertMarkerInstructions,
+  assertMarkerSkills,
   buildInstructionChoices,
   buildLocationChoices,
   checkNotebook,
@@ -135,6 +136,7 @@ async function runInit(packageData) {
   // have already changed.
   const existingMarker = await readInstallMarker(root);
   readMarkerLocations(existingMarker);
+  assertMarkerSkills(existingMarker, packageData.skills);
   await assertMarkerInstructions(root, existingMarker);
 
   // No flags + non-interactive (pipe, CI, test): the interactive confirm is
@@ -238,6 +240,7 @@ async function runUpdate(options, packageData) {
   const root = await findProjectRoot();
   const marker = await readInstallMarker(root);
   const locations = readMarkerLocations(marker);
+  assertMarkerSkills(marker, packageData.skills);
 
   if (locations.length === 0) {
     console.error("No existing Drawbore install found. Run `drawbore init` first.");
@@ -353,6 +356,7 @@ async function runUninstall(options, packageData) {
   const root = await findProjectRoot();
   const marker = await readInstallMarker(root);
   const locations = readMarkerLocations(marker);
+  assertMarkerSkills(marker, packageData.skills);
 
   if (locations.length === 0) {
     console.error("No Drawbore install found. Run `drawbore init` first.");
@@ -380,13 +384,16 @@ async function runUninstall(options, packageData) {
   // A marker written before this field existed has no record, so the file is
   // kept rather than guessed at. Deleting developer content on a missing record
   // is the failure this replaces.
-  const existedBefore = new Set(Array.isArray(marker.existedBefore) ? marker.existedBefore : []);
+  const hasOwnershipMetadata = Array.isArray(marker.existedBefore);
+  const existedBefore = new Set(hasOwnershipMetadata ? marker.existedBefore : []);
   const instructions = [];
   for (const instructionFile of instructionFiles) {
-    // Only a file this installer created from nothing is removed with its block.
+    // A marker without ownership metadata cannot prove that Drawbore created the
+    // file, so keep it. Only an explicitly recorded created file is removed.
+    const removeEmpty = hasOwnershipMetadata && !existedBefore.has(instructionFile);
     const result = await removeInstruction(root, instructionFile, {
       dryRun,
-      removeEmpty: !existedBefore.has(instructionFile),
+      removeEmpty,
     });
     if (result.status === "removed") instructions.push(instructionFile);
     else if (result.status === "malformed") {

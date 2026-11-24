@@ -195,6 +195,41 @@ test("a marker written before existedBefore keeps the instruction file", async (
   }
 });
 
+test("uninstall removes the block from a pre-existing block-only instruction file", async () => {
+  const root = await project();
+  try {
+    const instructionPath = path.join(root, "AGENTS.md");
+    await writeFile(instructionPath, "<!-- drawbore:start -->\nblock\n<!-- drawbore:end -->\n");
+    await installed(root);
+    await writeFile(instructionPath, "<!-- drawbore:start -->\nblock\n<!-- drawbore:end -->\n");
+
+    const result = run(root, ["uninstall"]);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(await readFile(instructionPath, "utf8"), "");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("a marker written before existedBefore keeps a block-only instruction file", async () => {
+  const root = await project();
+  try {
+    await installed(root);
+    const markerPath = path.join(root, ".drawbore-install.json");
+    const marker = JSON.parse(await readFile(markerPath, "utf8"));
+    delete marker.existedBefore;
+    await writeFile(markerPath, `${JSON.stringify(marker, null, 2)}\n`);
+
+    const result = run(root, ["uninstall"]);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal((await readFile(path.join(root, "AGENTS.md"), "utf8")).trim(), "");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("sequential inits keep every installed location reversible", async () => {
   const root = await project();
   try {

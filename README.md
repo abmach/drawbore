@@ -64,7 +64,7 @@ The instruction file is selected from `AGENTS.md` or `CLAUDE.md`.
 | `--instruction <file>` | Adds the Drawbore block to `AGENTS.md` or `CLAUDE.md`. Repeatable. | the instruction file associated with each selected location (`.claude` uses `CLAUDE.md`; the other locations use `AGENTS.md`) |
 | `--no-instruction` | Does not add the Drawbore block to any instruction file. | disabled |
 | `--skills <list>` | Installs only the named skills. Comma-separated; unknown names are rejected. | all Drawbore skills |
-| `--force` | Replaces skills that belong to another package instead of refusing to overwrite them. | disabled |
+| `--force` | Replaces a skill directory owned by another package. Locally modified files inside an owned skill are still preserved. | disabled |
 | `--yes` | Accepts defaults without prompting. Explicit flags remain authoritative; this option does not authorize unrelated actions. | no effect beyond accepting defaults |
 | `--dry-run` | Prints the install plan without writing files. | disabled |
 
@@ -123,7 +123,7 @@ npx drawbore update --check     # drift report only; exit 1 if the install diffe
 npx drawbore update --force     # replace skills owned by another package
 ```
 
-`--check` reports every skill that is missing, foreign, or differs from the package.
+`--check` reports every skill that is missing, foreign, or differs from the package. `--force` replaces a foreign skill directory; it does not discard local edits inside an owned skill.
 
 ## Skills
 

@@ -1,6 +1,6 @@
 {
-  "version": "0.8.2",
-  "installedAt": "2026-11-23T13:02:23.471Z",
+  "version": "0.8.3",
+  "installedAt": "2026-11-24T13:56:03.356Z",
   "namespace": "drawbore",
   "skills": [
     "discover",
@@ -41,7 +41,7 @@
       "skills/record/SKILL.md": "3c6446798090483178b90a69229516817ebe382c19eb24b13bbf1457710b6d24",
       "skills/review/SKILL.md": "a8aac07d863abe7cdd36b1cb7f08e8a32a63c0325b763d3480aadedb5429a22c",
       "skills/init-project/SKILL.md": "0f2a7fbcd310296a4c25c4547381d302942027ca6da1634f53a98d870484e649",
-      "skills/release/SKILL.md": "80389a5717e9e1bf2c65e12f54fd319eb22135468c51cd726386f27393772cf2"
+      "skills/release/SKILL.md": "8b4a2546bdc06778faa6c9dadd0e42bd4954860f526e8b716fbca9b21c697b0f"
     }
   }
 }

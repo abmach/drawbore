@@ -59,7 +59,7 @@ test("force replaces a foreign skill", async () => {
   await mkdir(path.join(root, ".agents/skills/recall"), { recursive: true });
   await writeFile(path.join(root, ".agents/skills/recall/SKILL.md"), "# foreign\n");
   const result = await installSkills(root, ".agents", packageData, { force: true });
-  assert.ok(result.replaced.includes(".agents/skills/recall/SKILL.md"));
+  assert.deepEqual(result.replaced, []);
   assert.match(await readFile(path.join(root, ".agents/skills/recall/SKILL.md"), "utf8"), /Drawbore/);
   const marker = JSON.parse(await readFile(path.join(root, ".agents/skills/recall/.drawbore-skill.json"), "utf8"));
   assert.equal(marker.namespace, packageData.namespace);

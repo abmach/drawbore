@@ -333,7 +333,7 @@ test("check --fix aligns the id and then reports clean", async () => {
 
 test("check --fix renumbers duplicates keeping the widest id width", async () => {
   // The renumbered file must pad to the widest existing prefix, not its own
-  // width: `1-dup.md` renumbered to 2 must stay `0002-dup.md` when a `0007`
+  // width: `1-dup.md` renumbered to 8 must stay `0008-dup.md` when a `0007`
   // file is present.
   const root = await notebookRepo({
     "decisions/0001-first.md": DECISION(1),
@@ -347,7 +347,7 @@ test("check --fix renumbers duplicates keeping the widest id width", async () =>
     const files = await readdir(path.join(root, ".drawbore", "decisions"));
     const duplicate = files.find((file) => file.includes("dup"));
     assert.ok(duplicate, `expected a renumbered duplicate file, got ${files.join(", ")}`);
-    assert.equal(duplicate, "0002-dup.md");
+    assert.equal(duplicate, "0008-dup.md");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -371,6 +371,43 @@ test("check rejects unknown options with exit 2", async () => {
     assert.equal(result.status, 2);
     assert.match(result.stderr, /Unknown option for check: --jsn/);
   } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("init, update, and uninstall refuse a harness location symlinked outside the project", async () => {
+  const outside = await mkdtemp(path.join(os.tmpdir(), "drawbore-location-symlink-"));
+  const root = await repo();
+  try {
+    await symlink(outside, path.join(root, ".agents"), "dir");
+
+    const init = run(root, ["init", "--location", ".agents", "--no-notebook", "--no-instruction", "--yes"]);
+    assert.equal(init.status, 1);
+    assert.match(init.stderr, /path resolves outside the project/);
+    assert.deepEqual(await readdir(outside), []);
+
+    const marker = {
+      version: "0.8.2",
+      namespace: "drawbore",
+      skills: ["discover"],
+      locations: [".agents"],
+      instructions: [],
+      skillsByLocation: { ".agents": ["discover"] },
+      skillHashes: {},
+    };
+    await writeFile(path.join(root, ".drawbore-install.json"), `${JSON.stringify(marker, null, 2)}\n`);
+
+    const update = run(root, ["update"]);
+    assert.equal(update.status, 1);
+    assert.match(update.stderr, /path resolves outside the project/);
+    assert.deepEqual(await readdir(outside), []);
+
+    const uninstall = run(root, ["uninstall"]);
+    assert.equal(uninstall.status, 1);
+    assert.match(uninstall.stderr, /path resolves outside the project/);
+    assert.deepEqual(await readdir(outside), []);
+  } finally {
+    await rm(outside, { recursive: true, force: true });
     await rm(root, { recursive: true, force: true });
   }
 });
@@ -490,6 +527,67 @@ test("init refuses a corrupt marker before writing anything", async () => {
     assert.match(result.stderr, /marker .* is malformed/);
     await assert.rejects(readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md")));
     await assert.rejects(readFile(path.join(root, "AGENTS.md")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update and uninstall reject unsupported marker skill names", async () => {
+  const root = await repo();
+  try {
+    await writeFile(
+      path.join(root, ".drawbore-install.json"),
+      `${JSON.stringify({
+        version: "0.8.2",
+        namespace: "drawbore",
+        skills: ["discover"],
+        locations: [".agents"],
+        instructions: [],
+        skillsByLocation: { ".agents": ["../../../escape-skill"] },
+        skillHashes: {},
+      })}\n`,
+    );
+
+    const update = run(root, ["update"]);
+    assert.equal(update.status, 1);
+    assert.match(update.stderr, /unsupported skill/);
+    await assert.rejects(readdir(path.join(root, "..", "escape-skill")));
+
+    const uninstall = run(root, ["uninstall"]);
+    assert.equal(uninstall.status, 1);
+    assert.match(uninstall.stderr, /unsupported skill/);
+    await assert.rejects(readdir(path.join(root, "..", "escape-skill")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update and uninstall reject unsupported marker instruction files", async () => {
+  const root = await repo();
+  try {
+    const unrelated = path.join(root, "README.md");
+    await writeFile(unrelated, "keep me\n");
+    await writeFile(
+      path.join(root, ".drawbore-install.json"),
+      `${JSON.stringify({
+        version: "0.8.2",
+        namespace: "drawbore",
+        skills: ["discover"],
+        locations: [".agents"],
+        instructions: ["README.md"],
+        skillHashes: {},
+      })}\n`,
+    );
+
+    const update = run(root, ["update"]);
+    assert.equal(update.status, 1);
+    assert.match(update.stderr, /unsupported instruction file/);
+    assert.equal(await readFile(unrelated, "utf8"), "keep me\n");
+
+    const uninstall = run(root, ["uninstall"]);
+    assert.equal(uninstall.status, 1);
+    assert.match(uninstall.stderr, /unsupported instruction file/);
+    assert.equal(await readFile(unrelated, "utf8"), "keep me\n");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -20,8 +20,10 @@ file outright when the block was its whole content.
 
 Every marker field that names a filesystem destination is validated before the
 first write. `locations` must be in the supported set; `instructions` entries must
-resolve inside the project root. A violation is reported with exit 1, before any
-skill is copied, any block is spliced, or any file is removed.
+be `AGENTS.md` or `CLAUDE.md` and resolve inside the project root; recorded skill
+names must be members of the package's current skill set. A violation is reported
+with exit 1, before any skill is copied, any block is spliced, or any file is
+removed.
 
 ## Rationale
 
@@ -44,5 +46,6 @@ apart again. Source: commits `0a38e35` (the vulnerable state) and the fix in
 
 - `update` and `uninstall` both refuse an out-of-root instruction entry, exit 1,
   and touch nothing.
+- Unsupported instruction files and skill names are rejected before mutation.
 - The marker format is unchanged; existing valid markers keep working.
 - Any new marker field that names a destination MUST get the same treatment.

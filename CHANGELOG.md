@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] - 2026-11-24
+
+### Security
+
+- Harness locations now use canonical containment before installation, refresh, or removal. A supported location symlinked or junctioned outside the repository is refused before Drawbore writes or deletes content through it.
+- Marker-controlled skill names and instruction files are validated before mutation. Unknown skill names cannot become traversal paths, and instruction files outside the supported `AGENTS.md`/`CLAUDE.md` set are refused even when they are inside the project.
+
+### Fixed
+
+- Instruction-file ownership is now deterministic. A marker without `existedBefore` keeps the file, a pre-existing file containing only the Drawbore block is left empty after removal, and `init` refuses a file with only one Drawbore marker instead of creating an unreversible second pair.
+- `--force` now replaces a foreign skill directory or a file occupying a skill directory while preserving local edits inside an owned skill.
+- `drawbore check --fix` allocates repaired decision IDs above the highest existing ID, so retired decision identities are never reused.
+
+### Changed
+
+- The GitLab CI release pipeline now exits nonzero when the manifest version is already published to npm instead of completing as a no-op. The staged-publish job installs the reviewed exact npm CLI version `11.21.3` rather than floating within npm 11.
+
 ## [0.8.2] - 2026-11-23
 
 ### Changed
@@ -220,10 +237,10 @@ Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged releas
 - Skill conflicts are decided by content rather than by name. A skill directory is foreign only when its contents diverge from what the package ships; a file/directory mismatch is preserved instead of blocking the install.
 - `release` branches on `publish mode` and `pipeline`, reading them from `AGENTS.md`. Sections written before those fields existed are still handled: the mode is inferred from the prose and the CI file, and the package field is read as either `package` or `npm package`.
 
+[0.8.3]: https://gitlab.com/abmach/drawbore/-/compare/v0.8.2...v0.8.3
 [0.8.2]: https://gitlab.com/abmach/drawbore/-/compare/v0.8.1...v0.8.2
 [0.8.1]: https://gitlab.com/abmach/drawbore/-/compare/v0.8.0...v0.8.1
 [0.8.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.7.0...v0.8.0
-[Unreleased]: https://gitlab.com/abmach/drawbore/-/compare/v0.8.2...HEAD
 [0.7.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.6.0...v0.7.0
 [0.6.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.3...v0.6.0
 [0.5.3]: https://gitlab.com/abmach/drawbore/-/compare/v0.5.2...v0.5.3

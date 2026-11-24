@@ -20,7 +20,7 @@ test.after(async () => {
   await Promise.all(tempDirs.map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-test("force overwrites customized installed skill files", async () => {
+test("force preserves customized owned skill files", async () => {
   const root = await makeProject();
   const customized = path.join(root, ".agents", "skills", "discover", "SKILL.md");
 
@@ -29,9 +29,21 @@ test("force overwrites customized installed skill files", async () => {
 
   const result = await installSkills(root, ".agents", packageData, { force: true });
 
-  assert.match(await readFile(customized, "utf8"), /# Discover project context/);
-  assert.deepEqual(result.preserved, []);
-  assert.ok(result.replaced.includes(".agents/skills/discover/SKILL.md"));
+  assert.equal(await readFile(customized, "utf8"), "# Local customization\n");
+  assert.deepEqual(result.preserved, [".agents/skills/discover/SKILL.md"]);
+  assert.deepEqual(result.replaced, []);
+});
+
+test("force replaces a file occupying the skill directory", async () => {
+  const root = await makeProject();
+  const conflicting = path.join(root, ".agents", "skills", "discover");
+  await mkdir(path.dirname(conflicting), { recursive: true });
+  await writeFile(conflicting, "foreign file\n");
+
+  const result = await installSkills(root, ".agents", packageData, { force: true });
+
+  assert.match(await readFile(path.join(conflicting, "SKILL.md"), "utf8"), /# Discover project context/);
+  assert.deepEqual(result.replaced, []);
 });
 
 test("rerunning the installer preserves file-directory conflicts", async () => {
@@ -83,19 +95,17 @@ test("createNotebook preserves an existing .gitignore", async () => {
   }
 });
 
-test("addInstruction keeps content after an unclosed start marker", async () => {
+test("addInstruction rejects a lone end marker", async () => {
   const root = await makeProject();
   try {
     const target = path.join(root, "AGENTS.md");
-    await writeFile(target, "# Guide\n\n<!-- drawbore:start -->\nkeep this line\nmore content\n");
+    await writeFile(target, "# Guide\n\n<!-- drawbore:end -->\nkeep this line\n");
 
-    await addInstruction(root, "AGENTS.md", packageData);
-
-    const updated = await readFile(target, "utf8");
-    assert.equal(updated.match(/<!-- drawbore:start -->/g)?.length, 1);
-    assert.match(updated, /<!-- drawbore:end -->/);
-    assert.match(updated, /keep this line/);
-    assert.match(updated, /more content/);
+    await assert.rejects(
+      addInstruction(root, "AGENTS.md", packageData),
+      { name: "InstallTargetError", message: /malformed Drawbore markers/ },
+    );
+    assert.equal(await readFile(target, "utf8"), "# Guide\n\n<!-- drawbore:end -->\nkeep this line\n");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

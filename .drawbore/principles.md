@@ -1,6 +1,6 @@
 # Principles
 
-1. **Consent-aware installation** — never overwrite a file without an explicit choice; locally modified skills are preserved. Source: `copySkillDirectory` + `readInstalledSkillHashes`.
+1. **Consent-aware installation** — never overwrite a file without an explicit choice; locally modified skills are preserved. `--force` authorizes replacing a foreign skill directory, not discarding local edits inside an owned skill. Source: `copySkillDirectory` + `readInstalledSkillHashes`.
 2. **Provider-neutral** — no forge, registry, or CI provider is assumed. Source: README, `init-project` skill, installer has no provider constants.
 3. **Content-based conflict detection** — a skill directory is foreign only when its content diverges from the package; a name-only mismatch is preserved, not blocked. Source: `isForeignSkill`.
 4. **Every destination is validated, not trusted** — a repository-tracked file is hand-editable, so anything it names as a write or delete target is checked against the project before use. Source: `assertMarkerInstructions`, `readMarkerLocations`, decision 0003.

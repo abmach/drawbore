@@ -349,3 +349,23 @@ test("--fix renumbers duplicate ids without touching bodies", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("--fix allocates duplicate ids above the highest existing id", async () => {
+  const { root, notebook } = await notebookWith({
+    "decisions/0001-first.md": decision({ id: 1, slug: "first" }),
+    "decisions/0001-duplicate.md": decision({ id: 1, slug: "duplicate" }),
+    "decisions/0007-existing.md": decision({ id: 7, slug: "existing" }),
+  });
+  try {
+    const result = await fixMechanical(notebook);
+    assert.equal(result.changed, true);
+    const renamed = await readFile(path.join(notebook, "decisions", "0008-first.md"), "utf8");
+    assert.match(renamed, /^id: 0008$/m);
+    const findings = await checkNotebook(notebook);
+    // The original sequence has a deliberate gap, so the checker reports W002;
+    // the repair must not add a second gap below the new highest ID.
+    assert.deepEqual(codes(findings), ["W002"]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

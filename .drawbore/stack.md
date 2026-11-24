@@ -14,11 +14,11 @@
 
 ## Testing
 
-- `node --test` (node:test), 106 tests declared across `test/*.test.js`.
+- `node --test` (node:test) across `test/*.test.js`.
 
 ## CI
 
-- GitLab CI (`.gitlab-ci.yml`) — `test` (Node 24) and `test-node22` (pinned to Node 22.22.2) run the suite and the strict notebook check on branches, merge requests, and tags; `stage-npm` (tag-only, `needs: [test, test-node22]`) does the npm staged publish via OIDC `id_tokens`. GitHub is a mirror (no CI, no tags).
+- GitLab CI (`.gitlab-ci.yml`) — `test` (Node 24) and `test-node22` (pinned to Node 22.22.2) run the suite and the strict notebook check on branches, merge requests, and tags; `stage-npm` (tag-only, `needs: [test, test-node22]`) installs npm CLI 11.21.3 and stages the npm release via OIDC `id_tokens`. The job fails when the manifest version is already published. GitHub is a read-only distribution mirror that currently carries tags through v0.8.2 but has no CI workflow; GitLab remains canonical and owns release CI.
 
 ## Dependency resolution
 
