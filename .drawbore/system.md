@@ -9,14 +9,14 @@
 
 - `drawbore update` — refreshes an existing install from the install marker: re-copies the package's skills (preserving locally modified ones), re-applies the instruction block, and refreshes the marker. It never creates a notebook and never prompts for locations.
 - Flags: `--dry-run` (preview), `--check` (drift report; exit 1 when a skill is missing, foreign, a path conflict, or modified relative to the package), `--force` (replace a skill directory owned by another package). Local modifications inside an owned skill are preserved even with `--force`.
-- `locations`, `instructions`, and recorded skill names are all read from the marker, so all are validated before mutation: `locations` against the supported set, `instructions` against the supported `AGENTS.md`/`CLAUDE.md` set and canonical containment inside the project, and skill names against the package's current skill set. Containment is canonical: a path whose existing target or ancestors resolve outside the project is reported and exits 1 before anything is written, so a symlink cannot redirect a write or deletion outside the repository. Harness locations receive the same canonical containment check independently of the marker, so a location already symlinked outside the project cannot redirect a refresh. A marker that cannot be read or parsed is reported as malformed and exits 1; a missing marker is reported as no install.
+- `locations`, `instructions`, and recorded skill names are all read from the marker, so all are validated before mutation: `locations` against the supported set, `instructions` against the supported `AGENTS.md`/`CLAUDE.md` set and canonical containment inside the project, and skill names against the package's current skill set. Containment is canonical: a path whose existing target or ancestors resolve outside the project is reported and exits 1 before anything is written, so a symlink cannot redirect a write or deletion outside the repository. Harness locations receive the same canonical containment check independently of the marker, so a location already symlinked outside the project cannot redirect a refresh. A marker that cannot be read or parsed is reported as invalid and exits 1; a missing marker is reported as no install.
 
 ## Uninstall
 
 - `drawbore uninstall` — reverses an install: removes the skills the install owns, the Drawbore block from each recorded instruction file, and the install marker. It never removes a skill it does not own, and a skill with local modifications is kept whole and reported. The notebook survives unless `--purge` is passed. An instruction file the installer created from nothing is deleted with its block; one the developer already had keeps its content, decided by the `existedBefore` list the marker records at install. A marker without that field keeps the file rather than guessing. When the Drawbore block is the file's only content, removal leaves an empty file for a pre-existing file and deletes a file the installer created. The `.gitignore` note is removed either way. Each harness location is checked for canonical containment before removal, so a location resolving outside the project is reported and left untouched.
 - Flags: `--dry-run` (preview), `--purge` (also delete `.drawbore/`).
 - An instruction file that carries only one of the two drawbore markers is left untouched and reported. `init` refuses to write such a file rather than adding a second marker pair.
-- No install recorded in the project is reported and exits 1, matching `update`. A malformed marker is reported as malformed, not as no install.
+- No install recorded in the project is reported and exits 1, matching `update`. An invalid marker is reported as invalid, not as no install.
 
 ## Checker
 
@@ -24,7 +24,7 @@
 
 ## Skills
 
-- Seven portable skills: `discover`, `recall`, `frame`, `record`, `review`, `init-project`, `release`. Each carries its own `references/` where it needs one; `record` owns `references/questions.md`, the shared rule that a choice form carries one decidable unit and splits the rest into map-lined pages, which every skill states in its own words.
+- Seven portable skills: `discover`, `recall`, `frame`, `record`, `review`, `init-project`, `release`. Each carries its own `references/` where it needs one; `record` owns `references/questions.md`, the shared rule that a choice dialog collects every pending decision in one submission with one complete decision per map-lined page, which every skill states in its own words.
 - The `release` skill treats publication verification as read-only. After the release commit and tag, it reports registry approval, version availability, and provenance without editing tracked files, including `CHANGELOG.md`. A failed live publication requires a new version; a rejected staged version with no live registry version may follow the re-tagging rules.
 
 ## Distribution

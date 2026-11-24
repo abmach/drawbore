@@ -58,15 +58,15 @@ For every proposed update:
 
 1. State the evidence: the developer statement, prompt, code, diff, verification result, or history that supports it.
 2. Name the target record and show the proposed addition or replacement.
-3. Put the decision in a rendered form: one proposal per page — a checkbox group for **apply** / **edit** / **skip**, the evidence and the exact target record as text above the fields so the choice is readable without scrolling, a free-text field for the wording `edit` asks for, and a map line naming the proposal, its position in the total, and how many remain. When several updates are pending, one page per update in priority order; each page ends the turn, and an approval on one page is not consent for the next. Then wait for the developer's response.
+3. Put the decision in a rendered form: one proposal per page — a radio group for **apply** / **edit** / **skip**, the evidence and the exact target record as text above the fields so the choice is readable without scrolling, a free-text field for the wording **edit** asks for, and a map line naming the proposal, its position in the total, and how many remain. When several updates are pending, put all of them in one form with one top-level `<fieldset>` per update, in priority order, and use unique control names. The developer submits the form once; do not end the model turn after each update, and an answer to one page is not consent for another.
 4. Treat **apply** as approval of exactly the displayed proposal, **edit** as a request to revise it, and **skip** as no change.
-5. For **edit**, use the developer's wording, display the revised proposal, and obtain approval before writing it.
+5. For **edit**, use the developer's wording, display the revised proposals in a second form containing only those revisions, and obtain approval before writing them.
 6. Preserve the developer's wording when they supply it.
 7. Treat dependent edits—such as a decision, an affected current-truth artifact, and an index correction—as one atomic proposal: apply all or none.
 
 Do not write or delete any record record until the developer explicitly approves the displayed proposal. A request to "remember" a fact starts this workflow but does not approve unseen wording.
 
-A turn that ends by asking the developer to choose ends in a rendered form, not in prose: the question tool is a blocking prompt that cannot be skipped, prose can be scrolled past and answered by momentum. A form carries **one decidable unit** — one proposal with its evidence and target — and a page that would compress several proposals into labels is a page that lost the decision. When no form tool exists, ask one proposal per plain-text message, map line first, and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
+A turn that ends by asking the developer to choose ends in a rendered form, not in prose: the question tool is a blocking prompt that cannot be skipped, prose can be scrolled past and answered by momentum. A form carries **one decidable unit per page** — one proposal with its evidence and target — while collecting all pending proposals in one submission. When no form tool exists, ask one proposal per plain-text message, map line first, and stop until they answer. Never treat your own restatement of the options as the answer, and keep a free-text path for answers the options do not cover.
 
 ## Follow artifact rules
 

@@ -111,14 +111,25 @@ test("every skill that asks the developer to decide says how", async () => {
   }
 });
 
+test("the shared form reference collects every unit in one submission", async () => {
+  const reference = await readFile(
+    path.join(skillsDir, "record", "references", "questions.md"),
+    "utf8",
+  );
+  assert.match(reference, /one (?:decidable )?unit per page/i);
+  assert.match(reference, /one submission/i);
+  assert.match(reference, /top-level `<fieldset>`/i);
+  assert.doesNotMatch(reference, /every page ends the turn/i);
+});
+
 // A skill that names a decision list but not its rendering invites prose. These
 // four carry batch or per-item choices; a prose question there is the failure
-// the trigger exists to prevent. Since decision 0006 a form carries one
-// decidable unit, so the same four must also say how they split: more units mean
-// more pages, never compressed labels. A skill that says "rendered form" and
-// keeps a batch instruction fails here.
+// the trigger exists to prevent. A form now carries one decidable unit per page
+// and collects all pending units in one submission, so the same four must say
+// how they split without spending one model turn per page. A skill that says
+// "rendered form" and keeps a one-turn-per-page instruction fails here.
 const FORM_SKILLS = ["discover", "record", "recall", "review"];
-const UNIT_RULE = "one decidable unit";
+const UNIT_RULE = "one decidable unit per page";
 
 test("skills with a batch or per-item decision name the form that collects it", async () => {
   for (const skill of FORM_SKILLS) {
@@ -128,7 +139,12 @@ test("skills with a batch or per-item decision name the form that collects it", 
     assert.match(
       text,
       new RegExp(UNIT_RULE),
-      `${skill}/SKILL.md must state that a form carries ${UNIT_RULE} (decision 0006)`,
+      `${skill}/SKILL.md must state that a form carries ${UNIT_RULE}`,
+    );
+    assert.match(
+      text,
+      /one submission|submits the form once|collecting all/i,
+      `${skill}/SKILL.md must collect pending units in one submission`,
     );
   }
 });

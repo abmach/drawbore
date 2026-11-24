@@ -1,6 +1,7 @@
 ---
 id: 0006
-status: accepted
+status: superseded
+superseded_by: 0008
 significance: architectural
 date: 2026-11-20
 ---
