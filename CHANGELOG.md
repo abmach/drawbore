@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-11-25
+
+### Added
+
+- The portable `brainstorm` skill explores an idea through discussion, materially different alternatives, constructive challenge, and convergence on an agreed direction. It works with or without a Drawbore notebook, keeps free-form exploratory questions distinct from rendered choice forms, and hands project-specific scope to `frame` without maintaining a competing Change Brief.
+
+### Fixed
+
+- `drawbore update` now distinguishes full skill installs from explicit `--skills` subsets in the install marker. A full install receives skills added by newer package versions, while an explicit subset remains unchanged. Markers created before the new metadata existed keep their recorded set and are not widened automatically. The new `skillSelectionByLocation` field is validated as a trust boundary: unsupported locations and invalid modes are rejected before `init`, `update`, or `uninstall` changes anything.
+- Rerunning `drawbore init` now preserves the install marker's original instruction-file ownership. A file Drawbore created from nothing is no longer misclassified as developer-owned after a second install.
+
 ## [0.9.0] - 2026-11-24
 
 ### Changed
@@ -243,6 +254,7 @@ Published to npm as `drawbore@0.1.0` (bootstrap publish; the first staged releas
 - Skill conflicts are decided by content rather than by name. A skill directory is foreign only when its contents diverge from what the package ships; a file/directory mismatch is preserved instead of blocking the install.
 - `release` branches on `publish mode` and `pipeline`, reading them from `AGENTS.md`. Sections written before those fields existed are still handled: the mode is inferred from the prose and the CI file, and the package field is read as either `package` or `npm package`.
 
+[0.10.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.9.0...v0.10.0
 [0.9.0]: https://gitlab.com/abmach/drawbore/-/compare/v0.8.3...v0.9.0
 [0.8.3]: https://gitlab.com/abmach/drawbore/-/compare/v0.8.2...v0.8.3
 [0.8.2]: https://gitlab.com/abmach/drawbore/-/compare/v0.8.1...v0.8.2

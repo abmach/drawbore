@@ -173,6 +173,45 @@ test("uninstall removes an instruction file the installer created, keeps a pre-e
   }
 });
 
+test("rerunning init preserves instruction ownership metadata", async () => {
+  const created = await project();
+  try {
+    await installed(created);
+
+    const markerPath = path.join(created, ".drawbore-install.json");
+    const first = JSON.parse(await readFile(markerPath, "utf8"));
+    assert.deepEqual(first.existedBefore, []);
+
+    assert.equal(run(created, ["init", "--location", ".agents", "--notebook", "--instruction", "AGENTS.md", "--yes"]).status, 0);
+
+    const second = JSON.parse(await readFile(markerPath, "utf8"));
+    assert.deepEqual(second.existedBefore, []);
+
+    const uninstall = run(created, ["uninstall"]);
+    assert.equal(uninstall.status, 0, uninstall.stderr);
+    await assert.rejects(readFile(path.join(created, "AGENTS.md")));
+  } finally {
+    await rm(created, { recursive: true, force: true });
+  }
+
+  const preExisting = await project();
+  try {
+    await writeFile(path.join(preExisting, "AGENTS.md"), "# House rules\n");
+    await installed(preExisting);
+
+    const markerPath = path.join(preExisting, ".drawbore-install.json");
+    const first = JSON.parse(await readFile(markerPath, "utf8"));
+    assert.deepEqual(first.existedBefore, ["AGENTS.md"]);
+
+    assert.equal(run(preExisting, ["init", "--location", ".agents", "--notebook", "--instruction", "AGENTS.md", "--yes"]).status, 0);
+
+    const second = JSON.parse(await readFile(markerPath, "utf8"));
+    assert.deepEqual(second.existedBefore, ["AGENTS.md"]);
+  } finally {
+    await rm(preExisting, { recursive: true, force: true });
+  }
+});
+
 test("a marker written before existedBefore keeps the instruction file", async () => {
   const root = await project();
   try {

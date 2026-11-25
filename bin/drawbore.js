@@ -5,6 +5,7 @@ import {
   addInstruction,
   assertInstructionTarget,
   assertMarkerInstructions,
+  assertMarkerSkillSelection,
   assertMarkerSkills,
   buildInstructionChoices,
   buildLocationChoices,
@@ -32,6 +33,7 @@ import {
   removeInstruction,
   removeNotebook,
   removeSkills,
+  resolveUpdateSelection,
   SkillConflictError,
   summarize,
   supportedLocations,
@@ -137,6 +139,7 @@ async function runInit(packageData) {
   const existingMarker = await readInstallMarker(root);
   readMarkerLocations(existingMarker);
   assertMarkerSkills(existingMarker, packageData.skills);
+  assertMarkerSkillSelection(existingMarker);
   await assertMarkerInstructions(root, existingMarker);
 
   // No flags + non-interactive (pipe, CI, test): the interactive confirm is
@@ -175,7 +178,12 @@ async function runInit(packageData) {
     }
 
     const selection = plan?.skills ? { ...packageData, skills: plan.skills } : packageData;
-    if (plan?.skills) selection.skillsByLocation = Object.fromEntries(selectedLocations.map((location) => [location, plan.skills]));
+    if (plan?.skills) {
+      selection.skillsByLocation = Object.fromEntries(selectedLocations.map((location) => [location, plan.skills]));
+      selection.skillSelectionByLocation = Object.fromEntries(selectedLocations.map((location) => [location, "subset"]));
+    } else {
+      selection.skillSelectionByLocation = Object.fromEntries(selectedLocations.map((location) => [location, "full"]));
+    }
 
     // Every destination is validated before the first write, so a conflict in
     // one location cannot leave the others installed without a marker.
@@ -203,16 +211,37 @@ async function runInit(packageData) {
 
     // Which instruction files the developer already had, recorded before the
     // block is spliced in: `uninstall` keeps those, and removes only the files
-    // this run created from nothing.
+    // this run created from nothing. A rerun must preserve the first run's
+    // ownership: the block already exists, so checking after the first install
+    // would falsely classify a file Drawbore created as developer-owned.
+    const hasOwnershipMetadata = Array.isArray(existingMarker.existedBefore);
+    const previousOwned = new Set(hasOwnershipMetadata ? existingMarker.existedBefore : []);
+    const previouslyInstalled = new Set(Array.isArray(existingMarker.instructions)
+      ? existingMarker.instructions
+      : []);
     const existedBefore = [];
     const instructionFiles = [];
     for (const target of instructionTargets) {
-      if (await instructionExists(root, target.instructionFile)) existedBefore.push(target.instructionFile);
+      const existed = hasOwnershipMetadata
+        ? previousOwned.has(target.instructionFile)
+          || (!previouslyInstalled.has(target.instructionFile)
+            && await instructionExists(root, target.instructionFile))
+        : await instructionExists(root, target.instructionFile);
+      if (existed) existedBefore.push(target.instructionFile);
       await addInstruction(root, target.instructionFile, packageData);
       instructionFiles.push(target.instructionFile);
     }
 
-    await writeInstallMarker(root, selection, selectedLocations, notebookCreated ? notebookDirectory : null, [...new Set(instructionFiles)], skillHashes, existedBefore, existingMarker);
+    await writeInstallMarker(
+      root,
+      selection,
+      selectedLocations,
+      notebookCreated ? notebookDirectory : null,
+      [...new Set(instructionFiles)],
+      skillHashes,
+      existedBefore,
+      existingMarker,
+    );
     console.log(formatInstallResult(selectedLocations, notebookCreated, instructionFiles, preservedSkillFiles, replacedSkillFiles));
   } finally {
     ui.close();
@@ -241,6 +270,7 @@ async function runUpdate(options, packageData) {
   const marker = await readInstallMarker(root);
   const locations = readMarkerLocations(marker);
   assertMarkerSkills(marker, packageData.skills);
+  assertMarkerSkillSelection(marker);
 
   if (locations.length === 0) {
     console.error("No existing Drawbore install found. Run `drawbore init` first.");
@@ -253,16 +283,12 @@ async function runUpdate(options, packageData) {
   // a write target outside the tree `update` was invoked in.
   const instructionFiles = await assertMarkerInstructions(root, marker);
 
-  // The marker records what the user asked for: `init --skills` installs a
-  // subset, and `update` must not widen it behind their back. A marker without
-  // a skills list (older install) refreshes the full set.
-  const recordedSkills = Array.isArray(marker.skills)
-    ? marker.skills.filter((skill) => packageData.skills.includes(skill))
-    : null;
-  const selection = recordedSkills === null
-    ? { ...packageData }
-    : { ...packageData, skills: [...new Set(recordedSkills)] };
-  if (isRecord(marker.skillsByLocation)) selection.skillsByLocation = marker.skillsByLocation;
+  // The marker records what the user asked for: a full selection follows the
+  // package's current skill set, while `init --skills` installs a fixed subset
+  // that `update` must not widen. A marker without selection metadata is
+  // interpreted from its recorded set and the package's skill introduction
+  // versions.
+  const selection = resolveUpdateSelection(marker, packageData);
   const drifts = await diffSkills(root, locations, selection);
 
   console.log(`Drawbore ${packageData.version}`);
@@ -317,7 +343,16 @@ async function runUpdate(options, packageData) {
   // A refresh keeps the recorded notebook: `update` never creates one, and
   // nulling the field would erase the record a previous `init` wrote.
   const notebook = typeof marker.notebook === "string" ? marker.notebook : null;
-  await writeInstallMarker(root, selection, locations, notebook, applied, skillHashes, marker.existedBefore, marker);
+  await writeInstallMarker(
+    root,
+    selection,
+    locations,
+    notebook,
+    applied,
+    skillHashes,
+    marker.existedBefore,
+    marker,
+  );
   console.log(formatInstallResult(locations, false, applied, preservedSkillFiles, replacedSkillFiles, { noun: "Updated", firstInstall: false }));
 }
 
@@ -357,6 +392,7 @@ async function runUninstall(options, packageData) {
   const marker = await readInstallMarker(root);
   const locations = readMarkerLocations(marker);
   assertMarkerSkills(marker, packageData.skills);
+  assertMarkerSkillSelection(marker);
 
   if (locations.length === 0) {
     console.error("No Drawbore install found. Run `drawbore init` first.");

@@ -16,4 +16,4 @@ Durable, curated project context for AI-assisted software development. Drawbore 
 - **`lib/checker.js`** — structural linter over `.drawbore/` records.
 - **`lib/prompts.js`** — interactive UI (checkbox prompts, readline fallback).
 - **`templates/`** — notebook and instruction templates shipped to consumers.
-- **`skills/`** — seven portable skills shipped to consumers.
+- **`skills/`** — eight portable skills shipped to consumers.

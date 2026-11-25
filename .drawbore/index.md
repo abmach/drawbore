@@ -16,6 +16,8 @@ Durable, curated context for this project.
   - [0006 — One decidable unit per form](decisions/0006-one-unit-per-form.md) — superseded by the one-submission paginated form in decision 0008.
   - [0007 — Harness locations use canonical containment](decisions/0007-canonical-location-containment.md) — locations resolving outside the project are refused before mutation.
   - [0008 — Collect choice units in one paginated form](decisions/0008-batched-paginated-choice-forms.md) — one submission, one detailed unit per page.
+  - [0009 — Brainstorm before framing project scope](decisions/0009-brainstorm-before-frame.md) — exploration converges on a direction; frame owns scope and Change Briefs.
+  - [0010 — Record full and subset skill selections in the install marker](decisions/0010-full-and-subset-skill-selections.md) — full locations receive new skills; subsets stay fixed.
 - [System behavior](system.md) — current shipped capabilities and contracts.
 - [Technical choices](stack.md) — current stack and architecture.
 

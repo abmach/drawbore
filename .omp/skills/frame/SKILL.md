@@ -1,6 +1,6 @@
 ---
 name: frame
-description: Use this skill in a project with a Drawbore notebook (`.drawbore/index.md` at the repository root) when a feature request, bug fix, refactor, or technical change needs brainstorming or a materially clearer scope before implementation. It collaborates with the developer to define purpose, inclusions, non-goals, change points, acceptance conditions, open questions, and consequences, then maintains a transient Change Brief. If it is missing, do not create it — run `npx drawbore init`.
+description: Use this skill in a project with a Drawbore notebook (`.drawbore/index.md` at the repository root) when a feature request, bug fix, refactor, or technical change needs materially clearer project scope before implementation. It collaborates with the developer to define purpose, inclusions, non-goals, change points, acceptance conditions, open questions, and consequences, then maintains a transient Change Brief. Use brainstorm first when the direction itself still needs exploration; frame turns an agreed direction into project scope. If it is missing, do not create it — run `npx drawbore init`.
 license: MIT
 ---
 
@@ -9,6 +9,8 @@ license: MIT
 Requires `.drawbore/index.md` at the repository root. If it is absent, stop: this project is not initialized with Drawbore. Do not create the notebook or any record — tell the developer to run `npx drawbore init` and offer to continue afterwards.
 
 Collaborate with the developer until the intended change is clear enough to implement. This skill shapes scope; it does not orchestrate execution.
+
+If the direction itself is still open, use the `brainstorm` skill first. `brainstorm` explores alternatives and converges on a direction; `frame` turns that direction into project-specific scope and owns the Change Brief.
 
 Write every artifact this skill produces for a reader who is capable and has none of the author's implicit knowledge. This skill shares that bar verbatim with `record` and `discover`: the Change Brief is read by a session that was not in the conversation, and a scope that depends on the conversation is not a scope. State the purpose with the problem it solves, each inclusion with its behavior, each non-goal with the reason it is excluded when it could read as an oversight, and each acceptance condition with the observable result that proves it. Ground each statement in the developer's answer, the repository, or the diff; do not write "as discussed", "the usual", or "same as before". Keep the detail and the project's vocabulary with no loss of detail; the rule asks for completeness, not simplification.
 

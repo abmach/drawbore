@@ -15,7 +15,7 @@ The installer, notebook templates, structural checker, and portable skills are i
 ## What it provides
 
 - **Durable context** — a `.drawbore/` containing purpose, scope, architecture, glossary, principles, decisions, current behavior, and technical choices.
-- **Portable skills** — `discover`, `recall`, `frame`, `record`, `review`, `init-project`, and `release`.
+- **Portable skills** — `brainstorm`, `discover`, `recall`, `frame`, `record`, `review`, `init-project`, and `release`.
 - **Structural checks** — duplicate decision IDs, broken supersession, invalid records, missing headings, and stale-candidate warnings.
 - **Consent-aware installation** — no file is overwritten without an explicit choice; locally modified skills are preserved.
 - **Reversible installs** — `uninstall` removes the skills the install owns; skills with local edits are kept and reported rather than deleted.
@@ -81,8 +81,9 @@ Drawbore writes `.drawbore-install.json` at the project root. The file is reposi
 | `version` | string | Drawbore package version that wrote the marker. |
 | `installedAt` | string | ISO 8601 timestamp of the install or refresh that wrote the marker. |
 | `namespace` | string | Ownership namespace for the installed skills; Drawbore uses `drawbore`. |
-| `skills` | string array | Names of the skills selected for this installation. An older marker without this field is treated as selecting the full current skill set. |
+| `skills` | string array | Names of the skills selected for this installation. A legacy marker without `skillSelectionByLocation` keeps its recorded `skillsByLocation` sets unchanged and is not widened automatically. |
 | `skillsByLocation` | object | Maps each harness location in `locations` to the skill names installed there. `update` and `uninstall` use this map so a later `init` with a different skill subset cannot widen or narrow the ownership recorded for an earlier location. |
+| `skillSelectionByLocation` | object | Maps each harness location to `full` or `subset`. A `full` location follows the package's current complete skill set and receives skills added by later versions during `update`; a `subset` location keeps only its recorded skills. Markers created before this field existed keep their recorded set and are not widened automatically. The keys must be supported harness locations and the values must be `full` or `subset`; `init`, `update`, and `uninstall` reject malformed values before changing anything. |
 | `locations` | string array | Harness directories containing the installed skills. Each value must be one of `.agents`, `.claude`, `.codex`, `.cursor`, `.omp`, `.opencode`. |
 | `notebook` | string or `null` | The notebook directory when this installation created or refreshed it, or `null` when the installation did not manage a notebook. Drawbore uses `.drawbore`. |
 | `instructions` | string array | Instruction files that received the Drawbore block. Each value must be `AGENTS.md` or `CLAUDE.md`. |
@@ -115,7 +116,9 @@ npx drawbore check --fix
 npx drawbore update
 ```
 
-`update` re-copies the package's skills into the locations recorded in `.drawbore-install.json` — preserving locally modified files, same rules as `init` — re-applies the Drawbore block to the recorded instruction files, and refreshes the marker. It never creates a notebook and never prompts for locations; it works from the existing install marker.
+`drawbore update` re-copies the package's skills into the locations recorded in `.drawbore-install.json` — preserving locally modified files, same rules as `init` — re-applies the Drawbore block to the recorded instruction files, and refreshes the marker. It never creates a notebook and never prompts for locations; it works from the existing install marker.
+
+A location installed with the full skill set receives skills added by newer package versions. A location installed with `--skills` keeps that explicit subset; `update` never widens it.
 
 ```sh
 npx drawbore update --dry-run   # print what would change without writing
@@ -129,6 +132,7 @@ npx drawbore update --force     # replace skills owned by another package
 
 | Skill | Role |
 |---|---|
+| `brainstorm` | Explore alternatives, challenge decisions, and converge on a direction before project scope |
 | `discover` | Analyze an existing repository and propose its initial durable context |
 | `recall` | Consult durable context before work and reconcile the implementation afterward |
 | `frame` | Shape scope and maintain a Change Brief before implementation |

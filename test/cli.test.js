@@ -105,6 +105,7 @@ test("init installs the selected harness skills, notebook, and instruction block
     ]);
 
     assert.equal(result.status, 0, result.stderr);
+    await readFile(path.join(root, ".agents", "skills", "brainstorm", "SKILL.md"));
     await readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md"));
     await readFile(path.join(root, ".agents", "skills", "release", "SKILL.md"));
     await readFile(path.join(root, ".drawbore", "index.md"));
@@ -140,6 +141,20 @@ test("init supports the --yes defaults and the --skills subset", async () => {
   }
 });
 
+test("init --skills brainstorm installs only the brainstorm skill", async () => {
+  const root = await repo();
+  try {
+    const result = run(root, ["init", "--yes", "--skills", "brainstorm"]);
+    assert.equal(result.status, 0, result.stderr);
+
+    await readFile(path.join(root, ".agents", "skills", "brainstorm", "SKILL.md"));
+    await assert.rejects(readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md")));
+    await assert.rejects(readFile(path.join(root, ".agents", "skills", "frame", "SKILL.md")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("rerunning init preserves a locally edited skill", async () => {
   const root = await repo();
   try {
@@ -162,6 +177,109 @@ test("init rejects unknown options without installing anything", async () => {
     assert.equal(result.status, 2);
     assert.match(result.stderr, /Unknown option: --bogus/);
     await assert.rejects(readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update adds newly shipped skills to a full install but not to an explicit subset", async () => {
+  const root = await repo();
+  try {
+    assert.equal(run(root, ["init", "--yes"]).status, 0);
+
+    const markerPath = path.join(root, ".drawbore-install.json");
+    const marker = JSON.parse(await readFile(markerPath, "utf8"));
+    assert.equal(marker.skillSelectionByLocation[".agents"], "full");
+
+    const fullSkill = path.join(root, ".agents", "skills", "brainstorm");
+    await rm(fullSkill, { recursive: true, force: true });
+    marker.skills = marker.skills.filter((skill) => skill !== "brainstorm");
+    marker.skillsByLocation[".agents"] = marker.skillsByLocation[".agents"].filter((skill) => skill !== "brainstorm");
+    await writeFile(markerPath, `${JSON.stringify(marker, null, 2)}\n`);
+
+    const update = run(root, ["update"]);
+    assert.equal(update.status, 0, update.stderr);
+    await readFile(path.join(fullSkill, "SKILL.md"));
+
+    const subsetRoot = await repo();
+    try {
+      assert.equal(run(subsetRoot, ["init", "--yes", "--skills", "discover"]).status, 0);
+      const subsetMarkerPath = path.join(subsetRoot, ".drawbore-install.json");
+      const subsetMarker = JSON.parse(await readFile(subsetMarkerPath, "utf8"));
+      assert.equal(subsetMarker.skillSelectionByLocation[".agents"], "subset");
+
+      const subsetUpdate = run(subsetRoot, ["update"]);
+      assert.equal(subsetUpdate.status, 0, subsetUpdate.stderr);
+      await readFile(path.join(subsetRoot, ".agents", "skills", "discover", "SKILL.md"));
+      await assert.rejects(readFile(path.join(subsetRoot, ".agents", "skills", "brainstorm", "SKILL.md")));
+    } finally {
+      await rm(subsetRoot, { recursive: true, force: true });
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("update keeps legacy markers at their recorded skill set", async () => {
+  const root = await repo();
+  try {
+    assert.equal(run(root, ["init", "--yes", "--skills", "discover"]).status, 0);
+
+    const markerPath = path.join(root, ".drawbore-install.json");
+    const marker = JSON.parse(await readFile(markerPath, "utf8"));
+    delete marker.skillSelectionByLocation;
+    await writeFile(markerPath, `${JSON.stringify(marker, null, 2)}\n`);
+
+    const update = run(root, ["update"]);
+    assert.equal(update.status, 0, update.stderr);
+    await readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md"));
+    await assert.rejects(readFile(path.join(root, ".agents", "skills", "brainstorm", "SKILL.md")));
+
+    const refreshed = JSON.parse(await readFile(markerPath, "utf8"));
+    assert.equal(refreshed.skillSelectionByLocation[".agents"], "subset");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("malformed skill selection metadata is rejected before mutation", async () => {
+  const root = await repo();
+  try {
+    assert.equal(run(root, ["init", "--yes"]).status, 0);
+
+    const markerPath = path.join(root, ".drawbore-install.json");
+    const marker = JSON.parse(await readFile(markerPath, "utf8"));
+    marker.skillSelectionByLocation = { "../outside": "full" };
+    await writeFile(markerPath, `${JSON.stringify(marker, null, 2)}\n`);
+
+    const update = run(root, ["update"]);
+    assert.equal(update.status, 1);
+    assert.match(update.stderr, /unsupported skill selection location/);
+
+    const uninstalledLocation = JSON.parse(await readFile(markerPath, "utf8"));
+    uninstalledLocation.skillSelectionByLocation = { ".cursor": "full" };
+    await writeFile(markerPath, `${JSON.stringify(uninstalledLocation, null, 2)}\n`);
+
+    const uninstalled = run(root, ["update"]);
+    assert.equal(uninstalled.status, 1);
+    assert.match(uninstalled.stderr, /skill selection for an uninstalled location/);
+
+    const nonObject = JSON.parse(await readFile(markerPath, "utf8"));
+    nonObject.skillSelectionByLocation = ["full"];
+    await writeFile(markerPath, `${JSON.stringify(nonObject, null, 2)}\n`);
+
+    const nonObjectResult = run(root, ["update"]);
+    assert.equal(nonObjectResult.status, 1);
+    assert.match(nonObjectResult.stderr, /invalid skillSelectionByLocation value/);
+
+    const invalidMode = JSON.parse(await readFile(markerPath, "utf8"));
+    invalidMode.skillSelectionByLocation = { ".agents": "everything" };
+    await writeFile(markerPath, `${JSON.stringify(invalidMode, null, 2)}\n`);
+
+    const uninstall = run(root, ["uninstall"]);
+    assert.equal(uninstall.status, 1);
+    assert.match(uninstall.stderr, /invalid skill selection mode/);
+    await readFile(path.join(root, ".agents", "skills", "discover", "SKILL.md"));
   } finally {
     await rm(root, { recursive: true, force: true });
   }

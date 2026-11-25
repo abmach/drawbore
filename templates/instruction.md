@@ -1,7 +1,7 @@
 <!-- drawbore:start -->
 ## Drawbore
 
-This project uses `.drawbore/` as its curated, durable project context. Drawbore installs portable skills into the agent harness; use the `discover`, `recall`, `frame`, `record`, `review`, `init-project`, and `release` skills where the task calls for them.
+This project uses `.drawbore/` as its curated, durable project context. Drawbore installs portable skills into the agent harness; use the `brainstorm`, `discover`, `recall`, `frame`, `record`, `review`, `init-project`, and `release` skills where the task calls for them.
 
 Durable context is written for a reader who is capable and has none of the author's implicit knowledge — the next session, which reads `.drawbore/` and nothing else. Ground each statement in evidence the entry carries, do not use session-dependent phrasing such as "as discussed" or "same as before", define terms the reader cannot resolve, and state conditions completely. This is completeness, not simplification: keep the detail and the project's vocabulary.
 

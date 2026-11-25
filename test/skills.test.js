@@ -23,11 +23,11 @@ const BODY_CLAUSE =
   "Requires `.drawbore/index.md` at the repository root. If it is absent, stop: this project is not initialized with Drawbore. Do not create the notebook or any record — tell the developer to run `npx drawbore init` and offer to continue afterwards.";
 
 // Skills that read or write the notebook. `discover` bootstraps it, and
-// `review`, `release`, and `init-project` work without one.
+// `brainstorm`, `review`, `release`, and `init-project` work without one.
 const GATED = ["frame", "recall", "record"];
 const WRITERS = ["frame", "record"];
 const READERS = ["recall"];
-const UNGATED = ["discover", "init-project", "release", "review"];
+const UNGATED = ["brainstorm", "discover", "init-project", "release", "review"];
 
 const skillsDir = path.resolve("skills");
 
@@ -111,6 +111,76 @@ test("every skill that asks the developer to decide says how", async () => {
   }
 });
 
+test("brainstorm converges without owning project scope", async () => {
+  const text = await skillText("brainstorm");
+
+  assert.match(
+    text,
+    /objective is understood/i,
+    "brainstorm must state the objective as part of convergence",
+  );
+  assert.match(
+    text,
+    /direction has been agreed/i,
+    "brainstorm must require an agreed direction before convergence",
+  );
+  assert.match(
+    text,
+    /no unresolved material decision could change the selected direction/i,
+    "brainstorm must make the convergence condition observable",
+  );
+  assert.match(
+    text,
+    /remaining uncertainties/i,
+    "brainstorm must distinguish non-blocking uncertainties from material decisions",
+  );
+  assert.match(
+    text,
+    /does not create or update a Change Brief/i,
+    "brainstorm must not compete with frame's Change Brief ownership",
+  );
+  assert.match(
+    text,
+    /`frame` owns project-specific scope/i,
+    "brainstorm must hand project-specific scope to frame",
+  );
+  assert.match(
+    text,
+    /\*\*Direction\*\*[\s\S]*\*\*Constraints\*\*[\s\S]*\*\*Alternatives\*\*[\s\S]*\*\*Risks\*\*[\s\S]*\*\*Remaining uncertainties\*\*/i,
+    "brainstorm must define the complete handoff summary",
+  );
+  assert.match(
+    text,
+    /Do not mutate the repository, notebook, or external systems\./i,
+    "brainstorm must not authorize side effects",
+  );
+  assert.doesNotMatch(
+    text,
+    /unless the developer's request explicitly requires it/i,
+    "brainstorm must not make mutation conditional on an unrelated request",
+  );
+});
+
+test("brainstorm distinguishes exploratory questions from choice turns", async () => {
+  const text = await skillText("brainstorm");
+
+  assert.match(
+    text,
+    /Exploratory questions may be conversational prose/i,
+    "brainstorm must preserve free-form exploratory discussion",
+  );
+  assert.match(
+    text,
+    /A turn that asks the developer to choose among options is a choice turn/i,
+    "brainstorm must distinguish a choice turn from an exploratory question",
+  );
+  assert.match(
+    text,
+    /one submission/i,
+    "brainstorm must collect pending choice units in one submission",
+  );
+});
+
 test("the shared form reference collects every unit in one submission", async () => {
   const reference = await readFile(
     path.join(skillsDir, "record", "references", "questions.md"),
@@ -123,12 +193,12 @@ test("the shared form reference collects every unit in one submission", async ()
 });
 
 // A skill that names a decision list but not its rendering invites prose. These
-// four carry batch or per-item choices; a prose question there is the failure
+// skills carry batch or per-item choices; a prose question there is the failure
 // the trigger exists to prevent. A form now carries one decidable unit per page
-// and collects all pending units in one submission, so the same four must say
-// how they split without spending one model turn per page. A skill that says
-// "rendered form" and keeps a one-turn-per-page instruction fails here.
-const FORM_SKILLS = ["discover", "record", "recall", "review"];
+// and collects all pending units in one submission, so each must say how they
+// split without spending one model turn per page. A skill that says "rendered
+// form" and keeps a one-turn-per-page instruction fails here.
+const FORM_SKILLS = ["brainstorm", "discover", "record", "recall", "review"];
 const UNIT_RULE = "one decidable unit per page";
 
 test("skills with a batch or per-item decision name the form that collects it", async () => {
